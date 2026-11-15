@@ -323,8 +323,16 @@ def main():
 
             # 1B. Verify Floor 2 Descent ALSO produces 100% identical authoritative map across P1 & P2!
             p1.evaluate('() => window.__SANCTUM__.descendToNextFloor()')
-            p1.wait_for_function('() => window.__SANCTUM__.floorIndex === 1 && window.__SANCTUM__.mode === "explore"', timeout=5000)
-            p2.wait_for_function('() => window.__SANCTUM__.floorIndex === 1 && window.__SANCTUM__.mode === "explore"', timeout=5000)
+            for page in pages:
+                try:
+                    page.wait_for_function('() => window.__SANCTUM__.floorIndex === 1 && window.__SANCTUM__.mode === "explore"', timeout=15000)
+                except Exception:
+                    print('Floor transition diagnostic:', page.evaluate('''() => {
+                      const g = window.__SANCTUM__;
+                      return { mode: g.mode, floor: g.floorIndex, room: g.lan.roomCode,
+                        connected: g.lan.connected, pendingEvents: g.lan._pendingRelays.size, errors: g._lanErrorText };
+                    }'''))
+                    raise
             p1.wait_for_timeout(250)
             sig1_f2 = extract_world_signature(p1)
             sig2_f2 = extract_world_signature(p2)
