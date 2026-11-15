@@ -2274,11 +2274,11 @@ class SanctumGame {
     this.scene.add(rig.root);
 
     const baseStats = {
-      thrall:     { hp: 380,   speed: 3.55, radius: 0.50, dmg: 18, range: 1.90, cd: 1.22, cinders: 4 },
-      stalker:    { hp: 330,   speed: 4.60, radius: 0.46, dmg: 22, range: 5.10, cd: 1.45, cinders: 5 },
-      acolyte:    { hp: 340,   speed: 3.30, radius: 0.48, dmg: 20, range: 11.60, cd: 1.25, cinders: 6 },
-      juggernaut: { hp: 1120,  speed: 2.40, radius: 0.76, dmg: 34, range: 2.60, cd: 2.15, cinders: 14, poise: true },
-      warden:     { hp: 15000, speed: 3.30, radius: 1.05, dmg: 36, range: 3.25, cd: 1.65, cinders: 135, poise: true, boss: true }
+      thrall:     { hp: 380,   speed: 3.30, radius: 0.50, dmg: 18, range: 1.90, cd: 1.22, cinders: 4 },
+      stalker:    { hp: 330,   speed: 4.28, radius: 0.46, dmg: 22, range: 5.10, cd: 1.45, cinders: 5 },
+      acolyte:    { hp: 340,   speed: 3.80, radius: 0.48, dmg: 20, range: 11.60, cd: 1.25, cinders: 6 },
+      juggernaut: { hp: 1120,  speed: 2.23, radius: 0.76, dmg: 34, range: 2.60, cd: 2.15, cinders: 14, poise: true },
+      warden:     { hp: 15000, speed: 3.07, radius: 1.05, dmg: 36, range: 3.25, cd: 1.65, cinders: 135, poise: true, boss: true }
     }[type];
 
     const fc = this.floorCfg;
@@ -4910,7 +4910,7 @@ class SanctumGame {
     }
   }
 
-  spawnEnemyProjectile(x, z, yaw, dmg, colorHex = 0xff3322, speed = 9.0, fromNet = false) {
+  spawnEnemyProjectile(x, z, yaw, dmg, colorHex = 0xff3322, speed = 6.3, fromNet = false) {
     if (!fromNet && this.isCoopHost && this.isCoopHost()) {
       this.coopBroadcastEnemyAttack({
         sub: 'proj',
@@ -8326,9 +8326,9 @@ class SanctumGame {
           if (e.type === 'acolyte') {
             this.sfx.enemyAttack('acolyte', { x: e.x, z: e.z });
             const depth = this.floorCfg.depth;
-            const count = depth >= 4 ? 3 : ((depth >= 2 || sc.difficultyId === 'abyssal') ? 2 : 1);
+            const count = depth >= 4 ? 4 : ((depth >= 2 || sc.difficultyId === 'abyssal') ? 3 : 2);
             const spread = 0.19;
-            const orbSpd = 10.6 + this.floorIndex * 1.15 + Math.max(0, atkTempo - 1.0) * 4.5;
+            const orbSpd = (10.6 + this.floorIndex * 1.15 + Math.max(0, atkTempo - 1.0) * 4.5) * 0.70;
             for (let k = 0; k < count; k++) {
               const ang = e.yaw + (k - (count - 1) * 0.5) * spread;
               this.spawnEnemyProjectile(e.x + Math.sin(ang) * 0.7, e.z + Math.cos(ang) * 0.7, ang, e.dmg, 0xff3322, orbSpd);
@@ -8384,10 +8384,10 @@ class SanctumGame {
               this.coopBroadcastEnemyAttack({ sub: 'melee_aoe', x: +e.x.toFixed(2), z: +e.z.toFixed(2), radius: 3.45, dmg: e.dmg, colorHex: 0xff6622, vfxRing: true });
             }
             if (this.floorCfg.depth >= 2 || e.hp < e.maxHp * 0.75 || sc.difficultyId === 'bloodfire' || sc.difficultyId === 'abyssal') {
-              const fanCount = 3 + this.floorIndex + (e.bossEnraged ? 2 : 0);
+              const fanCount = 4 + this.floorIndex + (e.bossEnraged ? 2 : 0);
               for (let f = 0; f < fanCount; f++) {
                 const ang = e.yaw + (f - (fanCount - 1) * 0.5) * 0.22;
-                this.spawnEnemyProjectile(e.x + Math.sin(ang) * 1.0, e.z + Math.cos(ang) * 1.0, ang, Math.round(e.dmg * 0.80), 0xff5522, 11.8 + this.floorIndex * 1.1);
+                this.spawnEnemyProjectile(e.x + Math.sin(ang) * 1.0, e.z + Math.cos(ang) * 1.0, ang, Math.round(e.dmg * 0.80), 0xff5522, (11.8 + this.floorIndex * 1.1) * 0.70);
               }
             }
           } else {
@@ -8437,10 +8437,10 @@ class SanctumGame {
               vfxRing: true
             });
           }
-          const novaCount = 7 + this.floorIndex * 2 + (e.bossEnraged ? 2 : 0);
+          const novaCount = 9 + this.floorIndex * 2 + (e.bossEnraged ? 2 : 0);
           for (let n = 0; n < novaCount; n++) {
             const ang = (n / novaCount) * Math.PI * 2 + (this.bossCycle || 0) * 0.25;
-            this.spawnEnemyProjectile(e.x + Math.sin(ang) * 0.9, e.z + Math.cos(ang) * 0.9, ang, Math.round(e.dmg * 0.80), 0xff5522, 11.0 + this.floorIndex * 1.0);
+            this.spawnEnemyProjectile(e.x + Math.sin(ang) * 0.9, e.z + Math.cos(ang) * 0.9, ang, Math.round(e.dmg * 0.80), 0xff5522, (11.0 + this.floorIndex * 1.0) * 0.70);
           }
           e.state = 'chase';
           e.cooldown = e.baseCd * 0.96;
