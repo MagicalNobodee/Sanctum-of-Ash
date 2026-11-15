@@ -280,14 +280,18 @@ def main():
             # Also sync prop position on P1 if prop existed so we check exact position
             p1.wait_for_timeout(550)
             # Have P2 also walk onto the broken prop spot if any so P2 absorbs 100% of orbs
-            p2.evaluate('''() => {
-              const g = window.__SANCTUM__;
-              if (g.cinderOrbs.length > 0) {
-                g.hero.x = g.cinderOrbs[0].x;
-                g.hero.z = g.cinderOrbs[0].z;
-              }
-            }''')
-            p1.wait_for_timeout(350)
+            for _ in range(12):
+                remaining = p2.evaluate('''() => {
+                  const g = window.__SANCTUM__;
+                  if (g.cinderOrbs.length > 0) {
+                    g.hero.x = g.cinderOrbs[0].x;
+                    g.hero.z = g.cinderOrbs[0].z;
+                  }
+                  return g.cinderOrbs.length;
+                }''')
+                if remaining == 0:
+                    break
+                p2.wait_for_timeout(200)
             p2_after_absorb = p2.evaluate('() => ({ cinders: window.__SANCTUM__.hero.cinders, orbsLeft: window.__SANCTUM__.cinderOrbs.length })')
             p1_still_waiting = p1.evaluate('''() => ({
               cinders: window.__SANCTUM__.hero.cinders,
