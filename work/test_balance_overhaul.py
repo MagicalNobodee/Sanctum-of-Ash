@@ -5,6 +5,7 @@ import sys
 import time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from test_energy_drops import run_energy_drop_checks, run_coop_energy_checks
 
 ROOT = Path(__file__).resolve().parent.parent
 HTML_PATH = ROOT / 'outputs' / 'sanctum-of-ash.html'
@@ -557,6 +558,7 @@ def run_solo_checks(p):
     }''')
     assert descent_flask_check['floorIndex'] == 1 and descent_flask_check['flasks'] == 3, f'Floor descent should grant +2 flasks: {descent_flask_check}'
 
+    run_energy_drop_checks(page)
     run_enemy_barrage_checks(page)
     assert not errors, f'Browser errors encountered: {errors}'
     browser.close()
@@ -637,8 +639,8 @@ def run_coop_checks(p):
           const cr = g.dungeon.rooms.find((r) => r.type === 'combat');
           g.spawnNextRoomWave(cr);
         }''')
-        time.sleep(0.35)
         c1_eids = p1.evaluate('() => window.__SANCTUM__.enemies.map((e) => e.eid).sort()')
+        p2.wait_for_function('(ids) => JSON.stringify(window.__SANCTUM__.enemies.map(e => e.eid).sort()) === JSON.stringify(ids)', arg=c1_eids, timeout=8000)
         c2_eids = p2.evaluate('() => window.__SANCTUM__.enemies.map((e) => e.eid).sort()')
         assert c1_eids == c2_eids and len(c1_eids) >= 14, f'Wave 2 coop sync mismatch: host={len(c1_eids)} client={len(c2_eids)}'
 
@@ -691,6 +693,7 @@ def run_coop_checks(p):
             assert client['color'] == host['color'], (host, client)
             assert abs(client['velocity'] - host['velocity']) < 1e-9, (host, client)
 
+        run_coop_energy_checks(p1, p2)
         assert not errors, f'Co-op errors: {errors}'
         browser.close()
         print('[PASS] Co-op difficulty, multi-wave and all 19 enemy projectiles synced!')
