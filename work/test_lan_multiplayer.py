@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args, available_memory_mb
 import base64
 from pathlib import Path
 import json
@@ -22,29 +23,11 @@ SAFETY_RESERVE_MB = 900
 
 def check_system_headroom(browser_count=MAX_BROWSERS):
     assert browser_count <= MAX_BROWSERS, f'Refusing to spawn {browser_count} browsers (cap={MAX_BROWSERS})'
-    vm_out = subprocess.check_output(['vm_stat'], text=True)
-    page_size = 16384
-    m_ps = re.search(r'page size of (\d+) bytes', vm_out)
-    if m_ps:
-        page_size = int(m_ps.group(1))
-
-    def pages_of(label):
-        m = re.search(rf'{re.escape(label)}:\s+(\d+)\.', vm_out)
-        return int(m.group(1)) if m else 0
-
-    reclaimable_pages = (
-        pages_of('Pages free')
-        + pages_of('Pages inactive')
-        + pages_of('Pages speculative')
-        + pages_of('Pages purgeable')
-    )
-    avail_mb = (reclaimable_pages * page_size) / (1024 * 1024)
+    avail_mb = available_memory_mb()
     estimated_need_mb = browser_count * EST_BROWSER_MB + EST_NODE_MB
-    load_out = subprocess.check_output(['sysctl', '-n', 'vm.loadavg'], text=True).strip()
     print(
         f'[Resource Guard] Reclaimable RAM: {avail_mb:.0f} MB | '
-        f'Est. test footprint ({browser_count} browsers + 1 Node): ~{estimated_need_mb} MB | '
-        f'LoadAvg: {load_out}'
+        f'Est. test footprint ({browser_count} browsers + 1 Node): ~{estimated_need_mb} MB'
     )
     if avail_mb < estimated_need_mb + SAFETY_RESERVE_MB:
         raise RuntimeError(
@@ -231,7 +214,7 @@ def main():
                     raise RuntimeError(f'Browser cap ({MAX_BROWSERS}) exceeded when spawning {label}')
                 br = p.chromium.launch(
                     headless=True,
-                    args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+                    args=chromium_args()
                 )
                 browsers.append(br)
                 vp = {'width': 1240, 'height': 800} if is_primary else {'width': 900, 'height': 580}

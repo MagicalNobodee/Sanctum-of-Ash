@@ -6,6 +6,11 @@
   </thead>
   <tbody>
     <tr>
+      <td valign="top">2026-11-15<br><sub>18:32</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22"><strong>补齐 Mac 与 Windows 兼容</strong></a><br>新增双平台启动入口，修复后台路径和测试限制，并加入两平台离线开局与双人联机自动检查。</td>
+    </tr>
+    <tr>
       <td valign="top">2026-11-15<br><sub>18:14</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16"><strong>调整紫晶掉落</strong></a><br>普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。</td>
@@ -25,11 +30,6 @@
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11"><strong>整理游戏顶部界面</strong></a><br>右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。</td>
     </tr>
-    <tr>
-      <td valign="top">2026-11-15<br><sub>17:11</sub></td>
-      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12"><strong>增加更新一览</strong></a><br>新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。</td>
-    </tr>
   </tbody>
 </table>
 <p align="right"><a href="UPDATES.md"><strong>查看完整更新列表 →</strong></a></p>
@@ -41,11 +41,15 @@
 
 ## 开始游戏
 
-下载完整仓库后，用现代桌面浏览器打开 `outputs/sanctum-of-ash.html`，即可离线单人游玩。根目录的 `SanctumOfAsh_3DRoguelike.html` 是同一份游戏，构建时会同步更新。
+macOS 和 Windows 均可用支持 WebGL 2 的现代桌面浏览器游玩，建议使用新版 Chrome 或 Edge。下载完整仓库后，打开 `outputs/sanctum-of-ash.html`，即可离线单人游玩。根目录的 `SanctumOfAsh_3DRoguelike.html` 是同一份游戏，构建时会同步更新。
 
 联机需要安装 Node.js 20 或更新版本。在项目根目录运行 `node lan-server.mjs --open`，再把游戏内显示的局域网地址分享给同一网络的朋友。默认使用 18765 端口，占用时会尝试后续三个端口。
 
 macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启动器会尝试启动联机服务；找不到 Node.js 时会打开离线游戏。首次运行下载的启动器时，可能需要在系统设置中允许打开。
+
+Windows 用户双击 `outputs/Start-Sanctum.cmd`；macOS 也可双击 `outputs/Start-Sanctum.command`。这两个入口会打开游戏并在命令窗口运行联机服务，作为房主时保留窗口，按 Ctrl+C 停止。未安装 Node.js 时提示安装并打开离线游戏。完整目录需保留，不能只复制启动器；单人离线只需 HTML。
+
+Windows 首次启动联机时，如果系统询问是否允许 Node.js 通过防火墙，请允许当前可信的专用网络。双方应在可互访的同一网络；访客 Wi-Fi、网络隔离和系统防火墙可能阻止局域网连接。公网通道还需要 `ssh`（macOS 自带，Windows 可安装系统的 OpenSSH 客户端）；缺少它不影响离线与局域网。
 
 公网邀请使用外部 SSH 隧道服务，需要联网且取决于服务可用性。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
 
@@ -58,6 +62,7 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 ## 目录结构
 
 - `outputs/余烬圣所 · Sanctum of Ash.app`：双击即玩启动器（自动检测并确保局域网联机服务后台运行后打开游戏）
+- `outputs/Start-Sanctum.cmd` / `outputs/Start-Sanctum.command`：Windows / macOS 命令窗口启动入口
 - `outputs/sanctum-of-ash.html`：独立可运行的完整正式版游戏文件（直接双击即可单人或局域网建房联机，内置自动发现与本地房间兜底）
 - `lan-server.mjs`：零依赖后台局域网联机服务（默认端口 18765，支持自动避让冲突端口与已运行实例复用）
 - `outputs/biome-showcase.html`：独立 8 套主题地牢交互式预览与接缝检查图鉴
@@ -84,7 +89,7 @@ npm ci --prefix work
 npm run build --prefix work
 npm run build:biomes --prefix work
 
-# 安装自动测试依赖
+# macOS 安装自动测试依赖
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r work/requirements.txt
@@ -96,4 +101,13 @@ python3 work/test_coop_sync_rules.py
 python3 work/test_lan_multiplayer.py
 ```
 
-部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随游戏规则更新。现有浏览器测试使用 macOS 图形参数；其他系统可能需要调整浏览器启动参数。仓库不会自动安装开机后台服务。
+Windows PowerShell 的测试环境安装与运行（不需要修改执行策略或激活脚本）：
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r work/requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+.\.venv\Scripts\python.exe work/test_platform_browser.py
+```
+
+浏览器测试会按系统选择图形设置，自动测试机器使用软件绘图；两平台持续检查构建、服务启动、离线开局和双人同步。跨平台冒烟测试为 `python3 work/test_platform_browser.py`，只使用一个浏览器、两个独立玩家环境和临时端口。它不代替不同电脑之间的真实网络、显卡与系统弹窗验收。部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随游戏规则更新。仓库不会自动安装开机后台服务。

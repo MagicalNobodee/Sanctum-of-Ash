@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 
@@ -21,7 +22,7 @@ SEEDS = [101101, 204809, 339157, 518233, 892417]
 with sync_playwright() as p:
     browser = p.chromium.launch(
         headless=True,
-        args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+        args=chromium_args()
     )
     context = browser.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=2)
     page = context.new_page()

@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 import json
 from pathlib import Path
 import subprocess
@@ -51,12 +52,12 @@ def main():
             errors = []
             b_host = p.chromium.launch(
                 headless=True,
-                args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+                args=chromium_args()
             )
             # Remote browser uses normal system network stack (no --no-proxy-server) to hit the real public HTTPS URL
             b_remote = p.chromium.launch(
                 headless=True,
-                args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+                args=chromium_args()
             )
             try:
                 ctx_h = b_host.new_context(viewport={'width': 1280, 'height': 820}, device_scale_factor=1.5)

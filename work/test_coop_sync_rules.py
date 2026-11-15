@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 import json
 from pathlib import Path
 import math
@@ -65,7 +66,7 @@ def main():
                 assert len(browsers) < MAX_BROWSERS
                 br = p.chromium.launch(
                     headless=True,
-                    args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+                    args=chromium_args()
                 )
                 browsers.append(br)
                 ctx = br.new_context(viewport={'width': 960, 'height': 600})

@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 
@@ -9,11 +10,11 @@ with sync_playwright() as p:
 
     b1 = p.chromium.launch(
         headless=True,
-        args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+        args=chromium_args()
     )
     b2 = p.chromium.launch(
         headless=True,
-        args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+        args=chromium_args()
     )
 
     try:
