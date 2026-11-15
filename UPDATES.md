@@ -6,7 +6,7 @@
 
 | 时间（UTC+8） | 开发者 | 任务 | 一句话说明 |
 | --- | --- | --- | --- |
-| 2026-11-15 18:32 | MagicalNobodee · Codex | [补齐 Mac 与 Windows 兼容](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22) | 新增双平台启动入口，修复后台路径和测试限制，并加入两平台离线开局与双人联机自动检查。 |
+| 2026-11-15 18:55 | MagicalNobodee · Codex | [补齐 Mac 与 Windows 兼容](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22) | 新增双平台启动入口并修复后台兼容问题；两平台默认做轻量验证，渲染和完整游戏回归改为按需运行。 |
 | 2026-11-15 18:16 | MagicalNobodee · Codex | [修复异地联机恢复](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9) | 补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。 |
 | 2026-11-15 18:14 | MagicalNobodee · Codex | [调整紫晶掉落](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16) | 普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。 |
 | 2026-11-15 18:09 | MagicalNobodee · Codex | [首页展示最近更新](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/18) | README 顶部新增最近 5 条更新卡片，下面可打开完整列表，原项目介绍保留在下方。 |

@@ -6,9 +6,9 @@
   </thead>
   <tbody>
     <tr>
-      <td valign="top">2026-11-15<br><sub>18:32</sub></td>
+      <td valign="top">2026-11-15<br><sub>18:55</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22"><strong>补齐 Mac 与 Windows 兼容</strong></a><br>新增双平台启动入口，修复后台路径和测试限制，并加入两平台离线开局与双人联机自动检查。</td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22"><strong>补齐 Mac 与 Windows 兼容</strong></a><br>新增双平台启动入口并修复后台兼容问题；两平台默认做轻量验证，渲染和完整游戏回归改为按需运行。</td>
     </tr>
     <tr>
       <td valign="top">2026-11-15<br><sub>18:16</sub></td>
@@ -91,13 +91,16 @@ npm ci --prefix work
 npm run build --prefix work
 npm run build:biomes --prefix work
 
-# macOS 安装自动测试依赖
+# 默认最小验证：不启动浏览器
+node --test work/test_platform_runtime.mjs
+
+# 仅需要浏览器验证时，macOS 安装测试依赖
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r work/requirements.txt
 python3 -m playwright install chromium
 
-# 串行运行，避免同时启动多组浏览器
+# 以下完整回归仅按需选择，不是每次修改的必跑清单；串行运行
 python3 work/test_balance_overhaul.py
 python3 work/test_coop_sync_rules.py
 python3 work/test_lan_multiplayer.py
@@ -117,4 +120,4 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe work/test_platform_browser.py
 ```
 
-浏览器测试会按系统选择图形设置，自动测试机器使用软件绘图；两平台持续检查构建、服务启动、离线开局和双人同步。跨平台冒烟测试为 `python3 work/test_platform_browser.py`，只使用一个浏览器、两个独立玩家环境和临时端口。它不代替不同电脑之间的真实网络、显卡与系统弹窗验收。部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随游戏规则更新。仓库不会自动安装开机后台服务。
+默认使用构建、轻量单测和无浏览器的真实后台检查；Windows/macOS 自动检查均不默认渲染游戏。需要时可手动触发 `collaboration` 工作流并勾选 `browser_smoke`，在远端运行低负载画面检查。本机按需运行 `python3 work/test_platform_browser.py`，只使用一个浏览器、同时一个页面，验证离线开局和网页建房，不连跑完整回归。双人消息和恢复由无画面的服务测试覆盖。它不代替不同电脑之间的真实网络、显卡与系统弹窗验收。部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随规则更新。仓库不会自动安装开机后台服务。
