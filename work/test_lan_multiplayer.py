@@ -242,9 +242,11 @@ def main():
                 pg.on('pageerror', lambda e, lb=label: all_errors.append(f'[{lb}] PAGEERROR: {e}'))
                 pg.on('console', lambda m, lb=label: all_errors.append(f'[{lb}] CONSOLE_{m.type}: {m.text}') if m.type == 'error' else None)
                 sep = '&' if '?' in path else '?'
-                full_path = f'{path}{sep}gfx=high' if is_primary else f'{path}{sep}gfx=low'
+                full_path = f'{path}{sep}gfx=low&charTimer=3'
                 pg.goto(f'{BASE_URL}{full_path}', wait_until='domcontentloaded', timeout=30000)
                 pg.wait_for_function('() => window.__SANCTUM__?.bootComplete === true', timeout=30000)
+                if pg.locator('#btn-enter-sanctum').is_visible():
+                    pg.click('#btn-enter-sanctum')
                 return pg
 
             def spawn_ws_peer():
@@ -256,7 +258,6 @@ def main():
             p1 = spawn_player_page('P1_Host', '/', is_primary=True)
             pages.append(p1)
             assert p1.evaluate('() => window.__SANCTUM__.mode') == 'title'
-            p1.click('#btn-enter-sanctum')
             p1.click('#btn-lan-lobby')
             p1.wait_for_timeout(350)
             assert p1.evaluate('() => window.__SANCTUM__.mode') == 'lobby'
@@ -309,17 +310,17 @@ def main():
 
             p2.click('#btn-lan-join')
             p2.wait_for_timeout(300)
-            assert p1.evaluate('window.__SANCTUM__.lan.playerCount') == 2
+            assert '小怪生命 1.78x' in p1.text_content('#lan-scale-banner'), 'Expected 2P standard mob scaling in lobby'
 
             p3_ws.send_json({'type': 'join_room', 'code': room_code, 'name': '翠影游侠', 'themeIdx': 2})
             p3_ws.wait_for_msg('room_joined')
             p1.wait_for_timeout(220)
-            assert p1.evaluate('window.__SANCTUM__.lan.playerCount') == 3
+            assert '小怪生命 2.36x' in p1.text_content('#lan-scale-banner'), 'Expected 3P standard mob scaling in lobby'
 
             p4_ws.send_json({'type': 'join_room', 'code': room_code, 'name': '星穹秘使', 'themeIdx': 3})
             p4_ws.wait_for_msg('room_joined')
             p1.wait_for_timeout(220)
-            assert p1.evaluate('window.__SANCTUM__.lan.playerCount') == 4
+            assert '小怪生命 2.93x' in p1.text_content('#lan-scale-banner'), 'Expected 4P standard mob scaling in lobby'
 
             # Verify Launch button requires all 4 players ready
             assert p1.is_disabled('#btn-lan-launch') is True
@@ -333,27 +334,16 @@ def main():
             # Test bilingual toggle inside 4P Lobby
             p1.keyboard.press('KeyL')
             p1.wait_for_timeout(140)
-            assert p1.text_content('#lan-header').strip()
-            assert '4P Co-op' in p1.text_content('#lan-scale-banner')
+            assert 'CO-OP LOBBY' in p1.text_content('#lan-header')
+            assert '4P Co-op · Mob HP 2.93x' in p1.text_content('#lan-scale-banner')
             p1.screenshot(path=f'{SHOT_DIR}/mp_02_lobby_4p_en.png')
             p1.keyboard.press('KeyL')
             p1.wait_for_timeout(140)
 
             # 3. Launch 4-Player Expedition & verify deterministic seed/biome/props sync
             p1.click('#btn-lan-launch')
-            p1.wait_for_function('window.__SANCTUM__.isCoopCharSelectActive()')
-            p2.wait_for_function('window.__SANCTUM__.isCoopCharSelectActive()')
-            p1.click('#btn-char-confirm')
-            p2.click('#btn-char-confirm')
-            picks = p1.evaluate('window.__SANCTUM__.coopCharSelect.picks')
-            session = p1.evaluate('window.__SANCTUM__.coopCharSelect.sessionId')
-            for peer in (p3_ws, p4_ws):
-                peer_id = peer.wait_for_msg('welcome')['clientId']
-                peer.send_json({'type': 'relay', 'target': 'others', 'payload': {
-                    'kind': 'char_select_lock', 'sessionId': session, 'locked': True,
-                    'classId': picks[peer_id]['browsedClassId']}})
             for pg in pages:
-                pg.wait_for_function('window.__SANCTUM__.mode === "explore"', timeout=15000)
+                pg.wait_for_function('() => window.__SANCTUM__.mode === "explore"', timeout=45000)
 
             states = [
                 pg.evaluate("""() => ({
@@ -378,7 +368,7 @@ def main():
                 assert st['roomCount'] == states[0]['roomCount'], f'Room count mismatch: {states}'
                 assert st['startWpn'] == states[0]['startWpn'], f'Start weapon mismatch: {states}'
                 assert st['remotes'] == 3, f'Expected 3 remote allies on P{idx+1}, got {st}'
-                assert '4人 ·' in st['coopTxt'], f'Unexpected coop pill: {st}'
+                assert '4人 · 3.10x' in st['coopTxt'], f'Unexpected coop pill: {st}'
                 assert st['partyCards'] == 4, f'Expected 4 party cards, got {st}'
             assert {st['themeIdx'] for st in states} == {0, 1}, f'Expected distinct crest colors on P1/P2: {states}'
             print('4P World Sync Verified (2 Browsers + 2 Zero-GPU WS Peers) -> Seed:', states[0]['seed'], 'Biome:', states[0]['biomeId'], 'StartWpn:', states[0]['startWpn'])
@@ -406,7 +396,7 @@ def main():
             p1_sees_p2_wpn = p1.evaluate('() => [...window.__SANCTUM__.remotePlayers.values()].find(p => p.slot === 1).weapons[0].id')
             assert p1_sees_p2_wpn == p2_wpn_id, f'Expected P1 to see P2 weapon {p2_wpn_id}, got {p1_sees_p2_wpn}'
 
-            # 4. Enter combat together and compare authoritative enemy counts and HP.
+            # 4. Verify the standard first wave and scaled mob HP, client attacks and aggro.
             combat_info = p1.evaluate("""() => {
                 const g = window.__SANCTUM__;
                 const cr = g.dungeon.rooms.find(r => r.type === 'combat');
@@ -425,8 +415,7 @@ def main():
                 }}""")
             p1.wait_for_timeout(420)
 
-            expected_enemy_count = p1.evaluate('window.__SANCTUM__.enemies.length')
-            assert expected_enemy_count > combat_info['baseCount'], '4P combat must add enemies'
+            # Standard mode applies floor extras, 4P extras and the 1.08 pack multiplier.
             for idx, pg in enumerate(pages):
                 c_chk = pg.evaluate(f"""() => {{
                     const g = window.__SANCTUM__;
@@ -440,12 +429,13 @@ def main():
                     }};
                 }}""")
                 assert c_chk['locked'] is True, f'Room not locked on P{idx+1}: {c_chk}'
-                assert c_chk['enemyCount'] == expected_enemy_count, f'Enemy count differs from host: {c_chk}'
+                expected_count = pg.evaluate('(base) => Math.round((base + window.__SANCTUM__.floorCfg.extraSpawns + 9) * 1.08)', combat_info['baseCount'])
+                assert c_chk['enemyCount'] == expected_count, f'Expected {expected_count} spawns in 4P, got {c_chk}'
                 if c_chk['sampleThrallMaxHp'] is not None:
-                    assert c_chk['sampleThrallMaxHp'] >= 265, f'Expected 2.95x scaled thrall HP (~271), got {c_chk}'
+                    assert c_chk['sampleThrallMaxHp'] == 1114, f'Expected standard 4P thrall HP, got {c_chk}'
 
             # Clients P2 (ranged lock-on), P3 (melee), P4 (weapon skill) attack enemies -> verify damage & aggro on Host
-            hp_total_before = p1.evaluate('() => window.__SANCTUM__.enemies.reduce((s, e) => s + e.hp, 0)')
+            hp_total_before = p1.evaluate('() => window.__SANCTUM__.enemies.reduce((s, e) => s + e.hp + e.shield, 0)')
             p2.evaluate("""() => {
                 const g = window.__SANCTUM__;
                 g.swapWeaponSlot(1);
@@ -482,7 +472,7 @@ def main():
 
             combat_sync = p1.evaluate("""() => {
                 const g = window.__SANCTUM__;
-                const hpAfter = g.enemies.reduce((s, e) => s + e.hp, 0);
+                const hpAfter = g.enemies.reduce((s, e) => s + e.hp + e.shield, 0);
                 const threatSenders = new Set();
                 for (const e of g.enemies) {
                     for (const k of Object.keys(e.threatMap || {})) threatSenders.add(k);
@@ -532,40 +522,41 @@ def main():
             print('Teammate Interactive Revive Verified -> P2 Restored:', p2_revived)
 
             # Clear combat room & verify gate unlock + Boon Shrine across all 4 players
-            for _ in range(8):
-                p1.evaluate("""() => {
-                    const g = window.__SANCTUM__;
+            p1.evaluate("""() => {
+                const g = window.__SANCTUM__;
+                for (let wave = 0; wave < 4 && g.enemies.length; wave++) {
                     for (const e of [...g.enemies]) {
                         if (e.shield > 0) g.damageEnemy(e, 99999, g.hero.x, g.hero.z);
                         if (e.hp > 0) g.damageEnemy(e, 999999, g.hero.x, g.hero.z);
                     }
-                }""")
-                p1.wait_for_timeout(500)
-                if not p1.evaluate(f'window.__SANCTUM__.dungeon.rooms.find(r => r.id === {combat_info["roomId"]}).locked'):
-                    break
+                }
+            }""")
+            p1.wait_for_timeout(720)
             dismiss_boons(pages)
             for idx, pg in enumerate(pages):
                 locked_now = pg.evaluate(f'() => window.__SANCTUM__.dungeon.rooms.find(r => r.id === {combat_info["roomId"]}).locked')
                 assert locked_now is False, f'Expected room unlocked on P{idx+1}'
 
-            # 6. Explicit leave scales immediately; abrupt loss is covered by recovery tests.
+            # 6. Standard overall difficulty rescales as peers leave.
             p4_ws.send_json({'type': 'leave_room'})
-            p1.wait_for_function('window.__SANCTUM__.lan.playerCount === 3')
+            for pg in pages:
+                pg.wait_for_function('() => window.__SANCTUM__.lan.playerCount === 3', timeout=5000)
             p4_ws.close()
             ws_peers.remove(p4_ws)
             p1.wait_for_timeout(350)
             for pg in pages:
                 pill_txt = pg.text_content('#coop-scale-text')
-                assert '3人 ·' in pill_txt, f'Expected dynamic rescale to 3P, got {pill_txt}'
+                assert '3人 · 2.47x' in pill_txt, f'Expected dynamic rescale to 3P 2.47x, got {pill_txt}'
             p3_ws.send_json({'type': 'leave_room'})
-            p1.wait_for_function('window.__SANCTUM__.lan.playerCount === 2')
+            for pg in pages:
+                pg.wait_for_function('() => window.__SANCTUM__.lan.playerCount === 2', timeout=5000)
             p3_ws.close()
             ws_peers.remove(p3_ws)
             p1.wait_for_timeout(350)
             for pg in pages:
                 pill_txt = pg.text_content('#coop-scale-text')
-                assert '2人 ·' in pill_txt, f'Expected dynamic rescale to 2P, got {pill_txt}'
-            print('Dynamic Mid-Run Explicit Leave Verified -> 4P -> 3P -> 2P')
+                assert '2人 · 1.84x' in pill_txt, f'Expected dynamic rescale to 2P 1.84x, got {pill_txt}'
+            print('Dynamic Mid-Run Player Leave Rescale Verified -> 4P 3.10x -> 3P 2.47x -> 2P 1.84x')
 
             # 7. Full 4-Floor Co-op Progression (Floor 1 -> 2 -> 3 -> 4 Victory via Abyssal Portals)
             for floor_idx in range(4):

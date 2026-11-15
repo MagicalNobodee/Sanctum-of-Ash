@@ -11,6 +11,11 @@
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9"><strong>修复异地联机恢复</strong></a><br>补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。</td>
     </tr>
     <tr>
+      <td valign="top">2026-11-15<br><sub>18:14</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16"><strong>调整紫晶掉落</strong></a><br>普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。</td>
+    </tr>
+    <tr>
       <td valign="top">2026-11-15<br><sub>18:09</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/18"><strong>首页展示最近更新</strong></a><br>README 顶部新增最近 5 条更新卡片，下面可打开完整列表，原项目介绍保留在下方。</td>
@@ -24,11 +29,6 @@
       <td valign="top">2026-11-15<br><sub>17:13</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11"><strong>整理游戏顶部界面</strong></a><br>右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。</td>
-    </tr>
-    <tr>
-      <td valign="top">2026-11-15<br><sub>17:11</sub></td>
-      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12"><strong>增加更新一览</strong></a><br>新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。</td>
     </tr>
   </tbody>
 </table>
