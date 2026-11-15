@@ -4910,7 +4910,7 @@ class SanctumGame {
     }
   }
 
-  spawnEnemyProjectile(x, z, yaw, dmg, colorHex = 0xc955ff, speed = 9.0, fromNet = false) {
+  spawnEnemyProjectile(x, z, yaw, dmg, colorHex = 0xff3322, speed = 9.0, fromNet = false) {
     if (!fromNet && this.isCoopHost && this.isCoopHost()) {
       this.coopBroadcastEnemyAttack({
         sub: 'proj',
@@ -8331,9 +8331,9 @@ class SanctumGame {
             const orbSpd = 10.6 + this.floorIndex * 1.15 + Math.max(0, atkTempo - 1.0) * 4.5;
             for (let k = 0; k < count; k++) {
               const ang = e.yaw + (k - (count - 1) * 0.5) * spread;
-              this.spawnEnemyProjectile(e.x + Math.sin(ang) * 0.7, e.z + Math.cos(ang) * 0.7, ang, e.dmg, 0xc955ff, orbSpd);
+              this.spawnEnemyProjectile(e.x + Math.sin(ang) * 0.7, e.z + Math.cos(ang) * 0.7, ang, e.dmg, 0xff3322, orbSpd);
             }
-            this.vfx.burst(e.x, 1.25, e.z, 0xc955ff, 12, 3.8, 3.0);
+            this.vfx.burst(e.x, 1.25, e.z, 0xff3322, 12, 3.8, 3.0);
           } else if (e.type === 'juggernaut') {
             this.sfx.enemyAttack('juggernaut', { x: e.x, z: e.z });
             this.cameraShake = Math.max(this.cameraShake, 0.24);
