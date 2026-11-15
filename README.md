@@ -14,7 +14,7 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 
 ## 多人开发与 Agent 协作
 
-让每位开发者的 Agent 开始任务前先读 [AGENTS.md](AGENTS.md)，具体流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。任务通过 GitHub Issue 认领与交接，每个任务使用独立分支，通过 PR 审阅和自动检查后合入。
+每位开发者只需向自己的 Agent 提修改需求，默认就授权它完成实现、测试和合入，无需另外说“允许合入”。Agent 先读 [AGENTS.md](AGENTS.md)，自行完成 [协作流程](CONTRIBUTING.md) 中的最新代码检查、认领、独立分支、自查和 PR 交付；只有实际目标冲突才需要用户确认。
 
 每次交付新增一份 [改动记录](docs/changes/)，长期共识放在 [决策记录](docs/decisions/)。新建 Issue 和 PR 时会提供统一模板；开始先获取最新代码，结束核实远端交付状态。
 
