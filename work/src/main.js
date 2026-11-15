@@ -797,10 +797,6 @@ class SanctumGame {
     } else {
       document.body.dataset.uiStage = this.mode || 'explore';
     }
-    const btn = document.getElementById('btn-pause');
-    if (!btn) return;
-    const inActiveRun = this.mode === 'explore' || this.mode === 'paused' || this.mode === 'boon' || this.mode === 'weapon';
-    btn.classList.toggle('hidden', !inActiveRun);
   }
 
   setQuality(q, persist = true) {
@@ -808,9 +804,6 @@ class SanctumGame {
     const ultra = q === 'ultra';
     this.gtaoPass.enabled = ultra;
     this.smaaPass.enabled = ultra;
-    const btn = document.getElementById('btn-quality');
-    const ui = tUI();
-    if (btn) btn.textContent = ultra ? ui.sysGfxUltra : ui.sysGfxHigh;
     if (persist) this.saveUserSettings();
     if (this.mode === 'paused') this.renderPauseMenu();
   }
@@ -6298,8 +6291,6 @@ class SanctumGame {
     const txt = (!this.sfx || this.sfx.muted || this.sfx.volume <= 0.001)
       ? ui.sysAudioOff
       : ui.sysAudioVol(Math.round(this.sfx.volume * 100));
-    const btnAudio = document.getElementById('btn-audio');
-    if (btnAudio) btnAudio.textContent = txt;
     const btnLandAudio = document.getElementById('btn-landing-audio');
     if (btnLandAudio) btnLandAudio.textContent = txt;
   }
@@ -6308,8 +6299,6 @@ class SanctumGame {
     const ui = tUI();
     const isFull = !!document.fullscreenElement;
     const txt = isFull ? ui.sysFullExit : ui.sysFullEnter;
-    const topBtn = document.getElementById('btn-fullscreen');
-    if (topBtn) topBtn.textContent = txt;
     const pauseBtn = document.getElementById('btn-set-fullscreen');
     if (pauseBtn) {
       pauseBtn.textContent = txt;
@@ -6465,6 +6454,8 @@ class SanctumGame {
     setTxt('pause-sec-build', ui.pauseSecBuild);
     setTxt('btn-pause-swap-order', ui.pauseSwapOrderBtn);
     setTxt('pause-sec-settings', ui.pauseSecSettings);
+    setTxt('lbl-set-lang', ui.pauseSetLanguage);
+    setTxt('btn-set-lang', ui.sysLang);
     setTxt('lbl-set-vol', ui.pauseSetVolume);
     setTxt('lbl-set-gfx', ui.pauseSetQuality);
     setTxt('set-gfx-ultra', ui.pauseOptUltra);
@@ -6644,10 +6635,8 @@ class SanctumGame {
       if (el) el.textContent = val;
     };
 
-    setTxt('btn-pause', ui.sysPauseBtn);
-    setTxt('btn-lang', ui.sysLang);
-    setTxt('btn-map', this.mapVisible ? ui.sysMapOn : ui.sysMapOff);
-    setTxt('btn-quality', this.quality === 'ultra' ? ui.sysGfxUltra : ui.sysGfxHigh);
+    setTxt('floor-label', ui.hudFloorLabel);
+    setTxt('cinder-label', ui.cindersUnit);
     this.updateAudioButtonText();
     this.updateFullscreenButtonText();
 
@@ -7120,38 +7109,10 @@ class SanctumGame {
       this.interactEl.addEventListener('click', () => this.tryInteract());
     }
 
-    const btnPause = document.getElementById('btn-pause');
-    if (btnPause) btnPause.addEventListener('click', () => this.togglePauseMenu());
-
-    const btnFull = document.getElementById('btn-fullscreen');
-    if (btnFull) btnFull.addEventListener('click', () => { this.sfx.init(); this.sfx.uiSettingTick(true); this.toggleFullscreen(); });
-
-    const btnLang = document.getElementById('btn-lang');
+    const btnLang = document.getElementById('btn-set-lang');
     if (btnLang) btnLang.addEventListener('click', () => this.handleToggleLanguage());
     const btnTitleLang = document.getElementById('btn-title-lang');
     if (btnTitleLang) btnTitleLang.addEventListener('click', () => this.handleToggleLanguage());
-
-    const btnMap = document.getElementById('btn-map');
-    if (btnMap) btnMap.addEventListener('click', () => this.toggleMinimap());
-
-    const btnQuality = document.getElementById('btn-quality');
-    if (btnQuality) {
-      btnQuality.addEventListener('click', () => {
-        this.sfx.init();
-        this.sfx.uiSettingTick(this.quality !== 'ultra');
-        this.setQuality(this.quality === 'ultra' ? 'high' : 'ultra');
-      });
-    }
-
-    const btnAudio = document.getElementById('btn-audio');
-    if (btnAudio) {
-      btnAudio.addEventListener('click', () => {
-        this.sfx.init();
-        this.sfx.toggleMute();
-        this.updateAudioButtonText();
-        if (this.mode === 'paused') this.renderPauseMenu();
-      });
-    }
 
     // Pause & Tactical Menu controls
     document.getElementById('btn-pause-resume')?.addEventListener('click', () => this.closePauseMenu());
@@ -7239,8 +7200,6 @@ class SanctumGame {
         }
       }
     }
-    const btnMap = document.getElementById('btn-map');
-    if (btnMap) btnMap.textContent = this.mapVisible ? tUI().sysMapOn : tUI().sysMapOff;
     if (persist) this.saveUserSettings();
     if (this.mapVisible) this.drawMinimap();
     if (this.mode === 'paused') this.renderPauseMenu();

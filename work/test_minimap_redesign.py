@@ -196,7 +196,7 @@ with sync_playwright() as p:
             g.hero.x = bossR.cx - 3.5;
             g.hero.z = bossR.cz + 3.0;
         }
-        document.getElementById('btn-lang').click();
+        g.handleToggleLanguage();
         g.drawMinimap();
         const wrap = document.getElementById('minimap-wrap');
         const items = [...wrap.querySelectorAll('.minimap-legend .mm-leg-item')];
