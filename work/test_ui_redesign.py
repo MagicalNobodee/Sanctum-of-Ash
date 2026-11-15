@@ -52,13 +52,12 @@ with sync_playwright() as p:
     # 2. Verify Home Cover Page (Landing) & Real 3D Showcase Camera
     landing_state = page.evaluate('''() => {
         const titleRect = document.querySelector('.landing-editorial').getBoundingClientRect();
-        const topCtrlOpacity = getComputedStyle(document.querySelector('.top-controls')).opacity;
         return {
             mode: window.__SANCTUM__.mode,
             titleStage: window.__SANCTUM__.titleStage,
             bootDone: document.getElementById('boot-screen').classList.contains('boot-done'),
             leftAligned: titleRect.left < 180 && titleRect.right < window.innerWidth * 0.5,
-            topCtrlHidden: Number(topCtrlOpacity) === 0,
+            topCtrlHidden: !document.querySelector('.top-controls'),
             camLabel: document.getElementById('landing-cam-label').textContent,
             shotCount: window.__SANCTUM__.showcaseShots.length,
             camPos0: window.__SANCTUM__.camera.position.toArray()

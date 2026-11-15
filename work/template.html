@@ -138,19 +138,7 @@
   #transition-title { font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px); letter-spacing: 0.16em; color: var(--gold-bright); margin-bottom: 8px; }
   #transition-sub { font-size: 13px; letter-spacing: 0.06em; color: var(--muted); max-width: 520px; }
 
-  /* ==================== MINIMALIST TOP UTILITY PILLS ==================== */
-  .top-controls {
-    position: fixed; top: 16px; right: 20px; z-index: 32;
-    display: flex; align-items: center; gap: 6px;
-    transition: opacity 0.25s ease;
-  }
-  body[data-ui-stage="boot"] .top-controls,
-  body[data-ui-stage="landing"] .top-controls {
-    opacity: 0; pointer-events: none;
-  }
-  body:not([data-ui-stage="explore"]) #btn-map {
-    display: none;
-  }
+  /* ==================== UTILITY BUTTONS ==================== */
   .sys-btn {
     background: rgba(9, 13, 22, 0.68);
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -161,11 +149,6 @@
   }
   .sys-btn:hover {
     color: var(--gold-bright); border-color: rgba(214, 176, 106, 0.55); background: rgba(18, 23, 36, 0.88);
-  }
-  .sys-btn.lang-btn { color: var(--gold-bright); border-color: rgba(214, 176, 106, 0.35); }
-  .sys-btn.pause-btn {
-    background: rgba(28, 20, 14, 0.82); border-color: rgba(245, 223, 176, 0.42);
-    color: var(--gold-bright); font-weight: 600;
   }
 
   /* ==================== OVERLAY BASE & EDITORIAL HOME COVER ==================== */
@@ -626,6 +609,7 @@
   .sp-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; white-space: nowrap; }
   .sp-item svg { width: 13.5px; height: 13.5px; flex-shrink: 0; }
   .sp-sep { width: 1px; height: 11px; background: rgba(255,255,255,0.12); margin: 0 9px; }
+  .telemetry-plaque { position: fixed; top: 16px; right: 20px; }
   .tel-led {
     width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; flex-shrink: 0;
     background: #4ade80; color: #4ade80; box-shadow: 0 0 8px currentColor;
@@ -1326,15 +1310,6 @@
     <div id="transition-sub">深渊封印正在开启……</div>
   </div>
 
-  <div class="top-controls">
-    <button id="btn-pause" class="sys-btn pause-btn hidden">菜单 [ESC]</button>
-    <button id="btn-lang" class="sys-btn lang-btn">语言: 中文</button>
-    <button id="btn-map" class="sys-btn">地图 [M]</button>
-    <button id="btn-quality" class="sys-btn">画质: 极高</button>
-    <button id="btn-audio" class="sys-btn">音效: 开</button>
-    <button id="btn-fullscreen" class="sys-btn">全屏</button>
-  </div>
-
   <!-- In-Game Dungeon HUD -->
   <div id="hud" class="hidden">
     <div class="hud-top-left">
@@ -1342,11 +1317,13 @@
         <div class="status-plaque">
           <span id="floor-pill" class="sp-item">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.8 14.2 5 8 8.2 1.8 5z"/><path d="M1.8 8.2 8 11.4 14.2 8.2"/><path d="M1.8 11.4 8 14.6 14.2 11.4"/></svg>
+            <span id="floor-label">层数</span>
             <span id="floor-val">1 / 4</span>
           </span>
           <span class="sp-sep"></span>
           <span id="cinder-pill" class="sp-item">
             <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.2 12.5 7.6 8 14.8 3.5 7.6z"/></svg>
+            <span id="cinder-label">余烬</span>
             <span id="cinder-val">0</span>
           </span>
         </div>
@@ -1877,6 +1854,12 @@
         <div class="pause-col">
           <div class="pause-sec-head">
             <span id="pause-sec-settings">游戏设置与操作指南</span>
+          </div>
+          <div class="setting-row">
+            <span id="lbl-set-lang">界面语言</span>
+            <div class="setting-controls">
+              <button id="btn-set-lang" class="seg-btn">语言: 中文</button>
+            </div>
           </div>
           <div class="setting-row">
             <span id="lbl-set-vol">主音量</span>

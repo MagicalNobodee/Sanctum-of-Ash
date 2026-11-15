@@ -25,7 +25,7 @@ with sync_playwright() as p:
     page.goto(HTML_PATH, wait_until='load')
     page.wait_for_timeout(900)
     assert page.evaluate('() => window.__SANCTUM__.mode') == 'title'
-    assert page.evaluate('() => document.getElementById("btn-pause").classList.contains("hidden")') is True
+    assert page.locator('#btn-pause').count() == 0
 
     # 1. LAN Lobby Escape returns to Title
     page.click('#btn-lan-lobby')
@@ -39,7 +39,7 @@ with sync_playwright() as p:
     page.click('#btn-start')
     page.wait_for_timeout(350)
     assert page.evaluate('() => window.__SANCTUM__.mode') == 'explore'
-    assert page.evaluate('() => !document.getElementById("btn-pause").classList.contains("hidden")') is True
+    assert page.locator('#btn-pause').count() == 0
 
     page.evaluate("""() => {
         const g = window.__SANCTUM__;
@@ -155,9 +155,9 @@ with sync_playwright() as p:
     saved = page.evaluate("""() => ({
         audio: JSON.parse(localStorage.getItem('sanctum_of_ash_audio') || '{}'),
         settings: JSON.parse(localStorage.getItem('sanctum_of_ash_settings') || '{}'),
-        btnAudio: document.getElementById('btn-audio').textContent
+        volumeText: document.getElementById('set-vol-val').textContent
     })""")
-    assert saved['audio'].get('volume') == 0.55 and '55%' in saved['btnAudio'], f'Audio persistence failed: {saved}'
+    assert saved['audio'].get('volume') == 0.55 and '55%' in saved['volumeText'], f'Audio persistence failed: {saved}'
     assert saved['settings'].get('screenShake') == 'soft', f'Settings persistence failed: {saved}'
 
     # Resume via Escape
