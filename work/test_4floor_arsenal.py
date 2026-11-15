@@ -29,7 +29,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(120)
     assert 'SANCTUM OF ASH' in page.text_content('#title-main'), 'Expected English title after toggle'
     page.screenshot(path=f'{SHOT_DIR}/ui_02_title_en.png')
-    page.click('#btn-lang')
+    page.keyboard.press('KeyL')
     page.wait_for_timeout(120)
     assert '余烬圣所' in page.text_content('#title-main'), 'Expected Chinese title restored'
 

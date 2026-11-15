@@ -47,6 +47,7 @@ export const UI_STRINGS = {
   zh: {
     pageTitle: '余烬圣所 · Sanctum of Ash',
     sysLang: '语言: 中文',
+    hudFloorLabel: '层数',
     sysMapOn: '地图 [M]',
     sysMapOff: '地图: 关',
     sysGfxUltra: '画质: 极高',
@@ -280,6 +281,7 @@ export const UI_STRINGS = {
     pauseSwapOrderBtn: '互换主副槽位 [1↔2]',
     pauseRelicsHeader: (n) => `已缔结圣物 (${n})`,
     pauseRelicsEmpty: '尚未缔结圣物 — 净化房间、开启秘宝或击败首领即可获取。',
+    pauseSetLanguage: '界面语言',
     pauseSetVolume: '主音量',
     pauseSetMute: '静音',
     pauseSetUnmute: '开启声音',
@@ -364,6 +366,7 @@ export const UI_STRINGS = {
   en: {
     pageTitle: 'SANCTUM OF ASH — 4-Floor Abyssal Roguelike',
     sysLang: 'LANG: EN',
+    hudFloorLabel: 'Floor',
     sysMapOn: 'MAP [M]',
     sysMapOff: 'MAP: OFF',
     sysGfxUltra: 'GFX: ULTRA',
@@ -597,6 +600,7 @@ export const UI_STRINGS = {
     pauseSwapOrderBtn: 'Swap Slots [1↔2]',
     pauseRelicsHeader: (n) => `BOUND RELICS (${n})`,
     pauseRelicsEmpty: 'No relics bound yet — purify chambers, open vaults, or slay bosses.',
+    pauseSetLanguage: 'Language',
     pauseSetVolume: 'Master Volume',
     pauseSetMute: 'Mute',
     pauseSetUnmute: 'Unmute',
