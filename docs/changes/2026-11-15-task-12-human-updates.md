@@ -1,0 +1,22 @@
+# 增加人读更新一览与 Agent 收尾要求
+
+## 任务
+
+Issue #12；负责人 MagicalNobodee；Agent 会话 human-updates-20261115。开始基线 `67cd38688b8b7160092bcb780fa2d5e9f2180e83`。用户要求一个固定、易读、最新在上的更新列表，并要求每次会话任务完成时由 Agent 补一条。
+
+## 改动
+
+新增根目录 `UPDATES.md`，用时间（UTC+8）、开发者、任务、一句话说明四列展示结果；核对已合入 PR 后补录五项历史交付，并记录本次任务。README 和 Contributing 顶部增加入口。更新 AGENTS.md、CONTRIBUTING.md 和 PR 模板，要求摘要随任务交付、最终汇报前核实，保留他人条目、避免重复和虚报完成。原有 `docs/changes/` 继续保存详细验证与风险，不改旧记录。GitHub 固定标签不支持任意添加自定义页签，采用显眼链接。不修改游戏行为、共享接口、构建或联机协议。
+
+## 验证
+
+- macOS；纯文档与 PR 模板修改，作者自查；不运行游戏浏览器实玩、不操作共享服务。
+- 检查六个任务文件的本地链接与标题锚点、不可见字符、六条记录的四列结构、时间倒序、重复项和一句话长度：通过；五项历史记录的开发者与 UTC+8 时间已逐项对照 GitHub 已合入 PR。
+- GitHub Markdown API 实际渲染 `UPDATES.md`：通过，输出一张四列表格、六行完整记录，任务链接正确。
+- `python3 -m unittest discover -s scripts -p 'test_*.py'`：12 项通过。
+- `python3 scripts/check_task_start.py`：获取最新主线并通过；`git diff --check`：通过。
+- 自查规则、流程、README 与 PR 模板的收尾要求一致，保留其他任务的范围及历史记录；云端 `verify` 和合入结果以 PR 为准。
+
+## 未完成与风险
+
+更新内容由任务 Agent 按规则填写；现有自动检查仍只验证详细改动记录，不能保证摘要内容真实或一定按规则填写。纯文档变更，不运行游戏实玩；GitHub `verify` 会执行现有自动检查与构建。最终合入状态以 PR 为准。
