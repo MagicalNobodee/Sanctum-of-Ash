@@ -294,6 +294,10 @@ export function createDownedBeacon(tex, themeHex = 0xff4d6d) {
 export const LAN_APP_ID = 'sanctum-of-ash-lan';
 export const LAN_CANDIDATE_PORTS = [18765, 18766, 18767, 18768];
 const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const RTC_STALE_MS = 4500;
+const WS_STALE_MS = 9000;
+const RESUME_WINDOW_MS = 40000;
+const SNAPSHOT_KINDS = new Set(['player_state', 'enemies_sync']);
 const RTC_ICE_SERVERS = [
   { urls: 'stun:stun.miwifi.com:3478' },
   { urls: 'stun:stun.chat.bilibili.com:3478' },
@@ -789,13 +793,19 @@ export class LanClient {
     this._rtcPeers = new Map();
     this._rtcWatchdogTimer = null;
     this._rtcAttemptCounts = new Map();
+    this._rtcRetryAt = new Map();
     this._wsReconnectTimer = null;
     this._wsReconnectStartedAt = 0;
     this.reconnectingWs = false;
     this.resumeToken = null;
     this._manualClose = false;
     this._txSeq = 0;
+    this._relayVersion = 0;
     this._rxSeq = new Map();
+    this._receivedEvents = new Map();
+    this._pendingRelays = new Map();
+    this._lastWsPongAt = 0;
+    this._wsPingMs = null;
     this.forceP2P = false;
     try {
       const params = new URLSearchParams(window.location.search || '');
@@ -880,6 +890,7 @@ export class LanClient {
   }
 
   async connect(customWsUrl = null) {
+    if (this.reconnectingWs && (!customWsUrl || customWsUrl.trim() === this.wsUrl)) return this;
     if (
       this.connected &&
       this.transportMode === 'lan' &&
@@ -961,21 +972,19 @@ export class LanClient {
       const timeout = setTimeout(() => {
         if (!settled) {
           settled = true;
+          if (this.ws === ws) { this.ws = null; this.connected = false; }
           try { ws.close(); } catch (_) {}
           reject(new Error('timeout'));
         }
       }, timeoutMs);
 
       ws.addEventListener('open', () => {
+        if (this.ws !== ws || settled) return;
         this.transportMode = 'lan';
-        this.connected = true;
-        this.connecting = false;
-        this._startPing();
-        this._startRtcWatchdog();
-        if (this.cb.onStatusChange) this.cb.onStatusChange();
       });
 
       ws.addEventListener('message', (ev) => {
+        if (this.ws !== ws) return;
         let msg;
         try {
           msg = JSON.parse(ev.data);
@@ -984,6 +993,10 @@ export class LanClient {
         }
         if (!msg || typeof msg.type !== 'string') return;
         if (msg.type === 'welcome') {
+          this._relayVersion = msg.relayVersion || 0;
+          this._lastWsPongAt = performance.now();
+          this.connected = true;
+          this.connecting = false;
           const resumingRoom = !!(this.reconnectingWs && this.roomCode && this.resumeToken);
           if (!resumingRoom) {
             this.clientId = msg.clientId;
@@ -994,6 +1007,8 @@ export class LanClient {
           if (typeof msg.wanStatus === 'string') this.wanStatus = msg.wanStatus;
           this.roomsList = Array.isArray(msg.rooms) ? msg.rooms : [];
           this.transportMode = 'lan';
+          this._startPing();
+          this._startRtcWatchdog();
           if (resumingRoom) {
             this.sendRaw({
               type: 'resume_room',
@@ -1002,7 +1017,7 @@ export class LanClient {
               isWan: !!this.isWanClient
             });
           }
-          if (!settled) {
+          if (!settled && !resumingRoom) {
             settled = true;
             clearTimeout(timeout);
             resolve(this);
@@ -1012,6 +1027,11 @@ export class LanClient {
           return;
         }
         this._handleMessage(msg);
+        if (!settled && (msg.type === 'room_resumed' || msg.type === 'resume_failed')) {
+          settled = true;
+          clearTimeout(timeout);
+          resolve(this);
+        }
       });
 
       ws.addEventListener('close', () => {
@@ -1038,48 +1058,89 @@ export class LanClient {
           if (this.cb.onStatusChange) this.cb.onStatusChange();
           return;
         }
-        const wasInRoom = !!this.roomCode;
-        this._stopPing();
-        this._stopRtcWatchdog();
-        this._closeAllRtcPeers();
-        this.transportMode = 'offline';
-        this.roomCode = null;
-        this.resumeToken = null;
-        this.reconnectingWs = false;
-        this.hostId = null;
-        this.inGame = false;
-        this.players = [];
-        if (wasInRoom && this.cb.onDisconnected) this.cb.onDisconnected();
-        if (this.cb.onStatusChange) this.cb.onStatusChange();
-        if (this.cb.onLobbyUpdate) this.cb.onLobbyUpdate();
+        this._finishDisconnected();
       });
 
       ws.addEventListener('error', () => {
         if (!settled) {
           clearTimeout(timeout);
           settled = true;
+          if (this.ws === ws) { this.ws = null; this.connected = false; }
+          try { ws.close(); } catch (_) {}
           reject(new Error('ws_error'));
         }
       });
     });
   }
 
+  _scheduleWsReconnect() {
+    if (this._manualClose || !this.reconnectingWs || this._wsReconnectTimer) return;
+    const elapsed = Date.now() - this._wsReconnectStartedAt;
+    if (elapsed >= RESUME_WINDOW_MS) {
+      this._finishDisconnected();
+      return;
+    }
+    this._wsReconnectTimer = setTimeout(async () => {
+      this._wsReconnectTimer = null;
+      if (!this.reconnectingWs || this._manualClose) return;
+      try {
+        // Wait for room_resumed before sending gameplay through this new socket.
+        await this._openWebSocket(this.wsUrl, 5000);
+      } catch (_) {}
+      if (this.reconnectingWs) this._scheduleWsReconnect();
+    }, Math.min(2500, 400 + Math.floor(elapsed / 4000) * 400));
+  }
+
+  _clearResume() {
+    clearTimeout(this._wsReconnectTimer);
+    this._wsReconnectTimer = null;
+    this._wsReconnectStartedAt = 0;
+    this.reconnectingWs = false;
+    this.resumeToken = null;
+    this._pendingRelays.clear();
+    this._rxSeq.clear();
+    this._receivedEvents.clear();
+    this._rtcAttemptCounts.clear();
+    this._rtcRetryAt.clear();
+  }
+
+  _finishDisconnected() {
+    const wasInRoom = !!this.roomCode;
+    this.disconnect(true);
+    if (wasInRoom && this.cb.onDisconnected) this.cb.onDisconnected();
+    if (this.cb.onStatusChange) this.cb.onStatusChange();
+    if (this.cb.onLobbyUpdate) this.cb.onLobbyUpdate();
+  }
+
   _startPing() {
     this._stopPing();
     const sendPing = () => {
-      if (!this.connected) return;
       const now = performance.now();
-      this.sendRaw({ type: 'ping_check', clientTs: now });
-      if (this.p2pPeerCount > 0) {
-        const preferredPeer = (!this.isHost && this.hostId && this._rtcPeers.get(this.hostId)?.open)
-          ? this._rtcPeers.get(this.hostId)
-          : [...this._rtcPeers.values()].find((e) => e.open);
-        if (preferredPeer && preferredPeer.dc && preferredPeer.dc.readyState === 'open') {
+      if (this.transportMode === 'lan' && this.connected && now - this._lastWsPongAt > WS_STALE_MS) {
+        const staleWs = this.ws;
+        this.ws = null;
+        this.connected = false;
+        try { staleWs?.close(); } catch (_) {}
+        if (this.roomCode && this.resumeToken) {
+          this.reconnectingWs = true;
+          if (!this._wsReconnectStartedAt) this._wsReconnectStartedAt = Date.now();
+          this._scheduleWsReconnect();
+        } else {
+          this._finishDisconnected();
+          return;
+        }
+        if (this.cb.onStatusChange) this.cb.onStatusChange();
+      }
+      if (this.connected) this.sendRaw({ type: 'ping_check', clientTs: now });
+      for (const entry of this._rtcPeers.values()) {
+        if (entry.open && entry.dc?.readyState === 'open') {
           try {
-            preferredPeer.dc.send(JSON.stringify({ k: 'ping', t: now }));
+            entry.dc.send(JSON.stringify({ k: 'ping', t: now, wanUrl: this.isHost ? this.wanUrl : undefined }));
           } catch (_) {}
         }
       }
+      this._updateP2PCount();
+      this._retryPendingRelays(now);
     };
     sendPing();
     this._pingTimer = setInterval(sendPing, 1500);
@@ -1109,14 +1170,30 @@ export class LanClient {
   _updateP2PCount() {
     let openCount = 0;
     for (const e of this._rtcPeers.values()) {
-      if (e.open && e.dc && e.dc.readyState === 'open') openCount++;
+      if (this._peerHealthy(e)) openCount++;
     }
     const prev = this.p2pPeerCount;
     this.p2pPeerCount = openCount;
-    if (openCount === 0) this.p2pPingMs = null;
+    if (openCount === 0) {
+      this.p2pPingMs = null;
+      this.pingMs = this._wsPingMs;
+    }
     if (prev !== openCount && this.cb.onStatusChange) {
       this.cb.onStatusChange();
     }
+  }
+
+  _peerHealthy(entry) {
+    return !!(entry?.open && entry.dc?.readyState === 'open' &&
+      entry.lastPongAt !== null && performance.now() - entry.lastPongAt < RTC_STALE_MS &&
+      entry.pc?.connectionState !== 'disconnected');
+  }
+
+  _retryPeerRtc(peerId) {
+    const attempts = (this._rtcAttemptCounts.get(peerId) || 0) + 1;
+    this._rtcAttemptCounts.set(peerId, attempts);
+    this._rtcRetryAt.set(peerId, performance.now() + Math.min(30000, 1000 * 2 ** Math.min(attempts, 5)));
+    this._closePeerRtc(peerId);
   }
 
   _closePeerRtc(peerId) {
@@ -1156,27 +1233,36 @@ export class LanClient {
       peerId,
       pc,
       dc: null,
+      stateDc: null,
       open: false,
       closed: false,
+      createdAt: performance.now(),
+      lastPongAt: null,
+      signalSent: false,
+      localIce: [],
+      sessionId: `${this.clientId}_${Math.random().toString(36).slice(2)}`,
       pendingIce: []
     };
     this._rtcPeers.set(peerId, entry);
 
     pc.onicecandidate = (ev) => {
-      if (entry.closed || !ev.candidate) return;
+      if (entry.closed || !ev.candidate || isFakeProxyCandidate(ev.candidate.candidate)) return;
+      if (!entry.signalSent) {
+        entry.localIce.push(ev.candidate);
+        return;
+      }
       this.sendRaw({
         type: 'relay',
         target: peerId,
-        payload: { kind: '__rtc_sig', sig: 'ice', candidate: ev.candidate }
+        payload: { kind: '__rtc_sig', sig: 'ice', candidate: ev.candidate, sessionId: entry.sessionId }
       });
     };
 
     pc.onconnectionstatechange = () => {
       if (entry.closed) return;
       const st = pc.connectionState;
-      if (st === 'failed' || st === 'closed' || st === 'disconnected') {
-        this._closePeerRtc(peerId);
-      }
+      if (st === 'failed' || st === 'closed') this._retryPeerRtc(peerId);
+      else this._updateP2PCount();
     };
 
     pc.ondatachannel = (ev) => {
@@ -1188,9 +1274,12 @@ export class LanClient {
   }
 
   _bindRtcDataChannel(peerId, entry, dc) {
-    entry.dc = dc;
+    const isState = dc.label === 'sanctum-state';
+    if (isState) entry.stateDc = dc;
+    else entry.dc = dc;
     dc.onopen = () => {
       if (entry.closed) return;
+      if (isState) return;
       entry.open = true;
       this._updateP2PCount();
       try {
@@ -1207,25 +1296,34 @@ export class LanClient {
       }
       if (!pkt || typeof pkt.k !== 'string') return;
       if (pkt.k === 'ping') {
+        if (pkt.wanUrl) this._receiveRelay(peerId, { kind: '__wan_update', url: pkt.wanUrl });
         try { dc.send(JSON.stringify({ k: 'pong', t: pkt.t })); } catch (_) {}
         return;
       }
       if (pkt.k === 'pong') {
-        const rtt = Math.max(1, Math.round(performance.now() - (pkt.t || performance.now())));
+        if (!Number.isFinite(pkt.t)) return;
+        const rtt = Math.max(1, Math.round(performance.now() - pkt.t));
+        entry.lastPongAt = performance.now();
+        this._rtcAttemptCounts.delete(peerId);
+        this._rtcRetryAt.delete(peerId);
         this.p2pPingMs = rtt;
         this.pingMs = rtt;
+        this._updateP2PCount();
         if (this.cb.onPing) this.cb.onPing(rtt);
         if (this.cb.onStatusChange) this.cb.onStatusChange();
         return;
       }
       if (pkt.k === 'relay' && pkt.payload) {
-        if (this.cb.onRelay) this.cb.onRelay(peerId, pkt.payload);
+        this._receiveRelay(peerId, pkt.payload, pkt.seq);
       }
     };
     const onClose = () => {
       if (entry.closed) return;
-      entry.open = false;
-      this._updateP2PCount();
+      if (isState) {
+        entry.stateDc = null;
+        return;
+      }
+      this._retryPeerRtc(peerId);
     };
     dc.onclose = onClose;
     dc.onerror = onClose;
@@ -1240,13 +1338,21 @@ export class LanClient {
     for (const pid of [...this._rtcPeers.keys()]) {
       if (!activeIds.has(pid) || pid === this.clientId) {
         this._closePeerRtc(pid);
+      } else {
+        const entry = this._rtcPeers.get(pid);
+        const lastHealthy = entry.lastPongAt ?? entry.createdAt;
+        if (performance.now() - lastHealthy > (entry.lastPongAt === null ? 12000 : RTC_STALE_MS)) {
+          this._retryPeerRtc(pid);
+        }
       }
     }
     for (const p of this.players) {
       if (!p || !p.id || p.id === this.clientId) continue;
       const pairNeedsP2P = !!(this.isWanClient || p.isWan || this.forceP2P);
       if (!pairNeedsP2P) continue;
+      if (!this.connected || this.reconnectingWs) continue;
       if (this._rtcPeers.has(p.id)) continue;
+      if (performance.now() < (this._rtcRetryAt.get(p.id) || 0)) continue;
       if (String(this.clientId) < String(p.id)) {
         this._initiatePeerRtc(p.id);
       }
@@ -1258,25 +1364,34 @@ export class LanClient {
       const entry = this._createPeerRtcEntry(peerId);
       const dc = entry.pc.createDataChannel('sanctum-p2p', { ordered: true });
       this._bindRtcDataChannel(peerId, entry, dc);
+      this._bindRtcDataChannel(peerId, entry, entry.pc.createDataChannel('sanctum-state', { ordered: false, maxRetransmits: 0 }));
       const offer = await entry.pc.createOffer();
       if (entry.closed) return;
       await entry.pc.setLocalDescription(offer);
       if (entry.closed) return;
-      this.sendRaw({
-        type: 'relay',
-        target: peerId,
-        payload: { kind: '__rtc_sig', sig: 'offer', sdp: entry.pc.localDescription }
-      });
+      this._sendRtcDescription(entry, 'offer');
     } catch (_) {
-      this._closePeerRtc(peerId);
+      this._retryPeerRtc(peerId);
+    }
+  }
+
+  _sendRtcDescription(entry, sig) {
+    this.sendRaw({ type: 'relay', target: entry.peerId,
+      payload: { kind: '__rtc_sig', sig, sdp: entry.pc.localDescription, sessionId: entry.sessionId } });
+    entry.signalSent = true;
+    for (const candidate of entry.localIce.splice(0)) {
+      this.sendRaw({ type: 'relay', target: entry.peerId,
+        payload: { kind: '__rtc_sig', sig: 'ice', candidate, sessionId: entry.sessionId } });
     }
   }
 
   async _handleRtcSignal(fromId, payload) {
-    if (!fromId || fromId === this.clientId || typeof RTCPeerConnection === 'undefined') return;
+    if (!this.inRoom || !fromId || fromId === this.clientId ||
+      !this.players.some((p) => p.id === fromId) || typeof RTCPeerConnection === 'undefined') return;
     try {
       if (payload.sig === 'offer' && payload.sdp) {
         const entry = this._createPeerRtcEntry(fromId);
+        if (payload.sessionId) entry.sessionId = payload.sessionId;
         await entry.pc.setRemoteDescription(payload.sdp);
         if (entry.closed) return;
         while (entry.pendingIce.length > 0) {
@@ -1287,15 +1402,12 @@ export class LanClient {
         if (entry.closed) return;
         await entry.pc.setLocalDescription(answer);
         if (entry.closed) return;
-        this.sendRaw({
-          type: 'relay',
-          target: fromId,
-          payload: { kind: '__rtc_sig', sig: 'answer', sdp: entry.pc.localDescription }
-        });
+        this._sendRtcDescription(entry, 'answer');
         return;
       }
       const entry = this._rtcPeers.get(fromId);
       if (!entry || entry.closed) return;
+      if (payload.sessionId && payload.sessionId !== entry.sessionId) return;
       if (payload.sig === 'answer' && payload.sdp) {
         await entry.pc.setRemoteDescription(payload.sdp);
         while (entry.pendingIce.length > 0) {
@@ -1304,7 +1416,7 @@ export class LanClient {
         }
         return;
       }
-      if (payload.sig === 'ice' && payload.candidate) {
+      if (payload.sig === 'ice' && payload.candidate && !isFakeProxyCandidate(payload.candidate.candidate)) {
         if (entry.pc.remoteDescription && entry.pc.remoteDescription.type) {
           try { await entry.pc.addIceCandidate(payload.candidate); } catch (_) {}
         } else {
@@ -1314,11 +1426,13 @@ export class LanClient {
     } catch (_) {}
   }
 
-  _sendPeerDirect(peerId, payload) {
+  _sendPeerDirect(peerId, payload, seq) {
     const entry = this._rtcPeers.get(peerId);
-    if (!entry || !entry.open || !entry.dc || entry.dc.readyState !== 'open') return false;
+    if (!this._peerHealthy(entry)) return false;
+    const dc = SNAPSHOT_KINDS.has(payload.kind) && entry.stateDc?.readyState === 'open' ? entry.stateDc : entry.dc;
+    if (dc.bufferedAmount > 32768) return false;
     try {
-      entry.dc.send(JSON.stringify({ k: 'relay', payload }));
+      dc.send(JSON.stringify({ k: 'relay', payload, seq }));
       return true;
     } catch (_) {
       return false;
@@ -1326,6 +1440,8 @@ export class LanClient {
   }
 
   disconnect(silent = false) {
+    this._manualClose = true;
+    this._clearResume();
     this._stopPing();
     this._stopRtcWatchdog();
     this._closeAllRtcPeers();
@@ -1353,6 +1469,8 @@ export class LanClient {
       return this.localBus.sendClientMsg(obj);
     }
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    if (obj.type === 'relay' && this.reconnectingWs) return false;
+    if (SNAPSHOT_KINDS.has(obj.payload?.kind) && this.ws.bufferedAmount > 32768) return false;
     try {
       this.ws.send(JSON.stringify(obj));
       return true;
@@ -1372,18 +1490,23 @@ export class LanClient {
 
   async createRoom({ name, themeIdx = 0, classId = null, preferredCode = '', wsUrl = null } = {}) {
     await this.connect(wsUrl);
-    this.sendRaw({ type: 'create_room', name, themeIdx, classId, preferredCode, isWan: !!this.isWanClient });
+    this.sendRaw({ type: 'create_room', name, themeIdx, classId, preferredCode, isWan: !!this.isWanClient, relayVersion: 1 });
   }
 
   async joinRoom({ code, name, themeIdx = null, classId = null, autoReady = false, wsUrl = null } = {}) {
     await this.connect(wsUrl);
-    this.sendRaw({ type: 'join_room', code, name, themeIdx, classId, autoReady, isWan: !!this.isWanClient });
+    this.sendRaw({ type: 'join_room', code, name, themeIdx, classId, autoReady, isWan: !!this.isWanClient, relayVersion: 1 });
   }
 
   leaveRoom() {
     this._closeAllRtcPeers();
     if (this.connected && this.roomCode) {
       this.sendRaw({ type: 'leave_room' });
+    }
+    if (this.reconnectingWs) {
+      this.disconnect(true);
+    } else {
+      this._clearResume();
     }
     this.roomCode = null;
     this.hostId = null;
@@ -1408,46 +1531,113 @@ export class LanClient {
 
   relay(payload, target = 'others') {
     if (!this.inRoom || !payload) return;
-    if (payload.kind === 'floor_init' || this.p2pPeerCount === 0 || this.transportMode !== 'lan') {
+    if (this.transportMode !== 'lan') {
       this.sendRaw({ type: 'relay', target, payload });
       return;
     }
-    if (target === 'all') {
-      const myId = this.clientId;
+    const seq = ++this._txSeq;
+    const ids = target === 'all' || target === 'others'
+      ? this.players.map((p) => p.id)
+      : [target === 'host' ? this.hostId : target];
+    if (target === 'all' || (target !== 'others' && ids.includes(this.clientId))) {
+      const room = this.roomCode;
       queueMicrotask(() => {
-        if (this.cb.onRelay) this.cb.onRelay(myId, payload);
+        if (this.roomCode === room && this.cb.onRelay) this.cb.onRelay(this.clientId, payload);
       });
-      for (const p of this.players) {
-        if (!p || p.id === myId) continue;
-        if (!this._sendPeerDirect(p.id, payload)) {
-          this.sendRaw({ type: 'relay', target: p.id, payload });
-        }
+    }
+    const peers = new Set(ids.filter((id) => id && id !== this.clientId));
+    const reliablePeers = new Set([...peers].filter((id) => this._supportsReliableRelay(id)));
+    if (!SNAPSHOT_KINDS.has(payload.kind) && reliablePeers.size) {
+      if (this._pendingRelays.size >= 512) {
+        if (this.cb.onRoomError) this.cb.onRoomError('delivery_timeout', this.roomCode);
+        return;
+      }
+      this._pendingRelays.set(seq, { payload, peers: reliablePeers, createdAt: performance.now(), sentAt: performance.now() });
+    }
+    for (const id of peers) this._transmitRelay(id, payload, seq);
+    // Cache floor transitions on the server even in a one-player room.
+    if (!peers.size && payload.kind === 'floor_init') this.sendRaw({ type: 'relay', target: 'others', payload, seq });
+  }
+
+  _transmitRelay(peerId, payload, seq) {
+    const direct = this._sendPeerDirect(peerId, payload, seq);
+    if (!direct || (!SNAPSHOT_KINDS.has(payload.kind) && this._supportsReliableRelay(peerId))) {
+      this.sendRaw({ type: 'relay', target: peerId, payload, seq });
+    }
+  }
+
+  _supportsReliableRelay(peerId) {
+    return this._relayVersion === 1 && this.players.some((p) => p.id === peerId && p.relayVersion === 1);
+  }
+
+  _retryPendingRelays(now = performance.now()) {
+    for (const [seq, event] of this._pendingRelays) {
+      for (const id of event.peers) {
+        if (!this.players.some((p) => p.id === id)) event.peers.delete(id);
+      }
+      if (!event.peers.size || now - event.createdAt > RESUME_WINDOW_MS) {
+        this._pendingRelays.delete(seq);
+        if (event.peers.size && this.cb.onRoomError) this.cb.onRoomError('delivery_timeout', this.roomCode);
+        continue;
+      }
+      if (now - event.sentAt < 1000) continue;
+      event.sentAt = now;
+      for (const id of event.peers) this._transmitRelay(id, event.payload, seq);
+    }
+  }
+
+  _receiveRelay(from, payload, seq) {
+    if (!payload || !this.roomCode || !this.players.some((p) => p.id === from)) return;
+    if (payload.kind === '__wan_update') {
+      if (from !== this.hostId || !this.isWanClient) return;
+      let next;
+      try {
+        next = new URL(payload.url);
+        if (next.protocol !== 'https:' || next.username || next.password || next.pathname !== '/' || next.search || next.hash) return;
+      } catch (_) { return; }
+      const nextWs = `wss://${next.host}/ws`;
+      if (nextWs !== this.wsUrl) {
+        this.wsUrl = nextWs;
+        this.wanUrl = next.origin;
+        if (this.ws) this.ws.close();
       }
       return;
     }
-    if (target === 'others') {
-      for (const p of this.players) {
-        if (!p || p.id === this.clientId) continue;
-        if (!this._sendPeerDirect(p.id, payload)) {
-          this.sendRaw({ type: 'relay', target: p.id, payload });
-        }
+    if (payload.kind === '__relay_ack') {
+      const pending = this._pendingRelays.get(payload.seq);
+      if (pending) {
+        pending.peers.delete(from);
+        if (!pending.peers.size) this._pendingRelays.delete(payload.seq);
       }
       return;
     }
-    if (target === 'host') {
-      if (this.hostId && this._sendPeerDirect(this.hostId, payload)) return;
-      this.sendRaw({ type: 'relay', target: 'host', payload });
-      return;
+    if (Number.isSafeInteger(seq) && seq > 0) {
+      if (SNAPSHOT_KINDS.has(payload.kind)) {
+        const key = `${from}:${payload.kind}`;
+        if (seq <= (this._rxSeq.get(key) || 0)) return;
+        this._rxSeq.set(key, seq);
+      } else {
+        const ack = { kind: '__relay_ack', seq };
+        this._transmitRelay(from, ack);
+        const key = `${from}:${seq}`;
+        if (this._receivedEvents.has(key)) return;
+        const now = performance.now();
+        this._receivedEvents.set(key, now);
+        for (const [oldKey, receivedAt] of this._receivedEvents) {
+          if (now - receivedAt < RESUME_WINDOW_MS + 10000) break;
+          this._receivedEvents.delete(oldKey);
+        }
+      }
     }
-    if (!this._sendPeerDirect(target, payload)) {
-      this.sendRaw({ type: 'relay', target, payload });
-    }
+    if (this.cb.onRelay) this.cb.onRelay(from, payload);
   }
 
   _handleMessage(msg) {
     if (msg.type === 'pong_check') {
+      this._lastWsPongAt = performance.now();
+      this._wsPingMs = Math.max(1, Math.round(performance.now() - (msg.clientTs ?? performance.now())));
       if (this.p2pPeerCount > 0 && this.p2pPingMs !== null) return;
-      const rtt = Math.max(1, Math.round(performance.now() - (msg.clientTs || performance.now())));
+      const rtt = this._wsPingMs;
       this.pingMs = rtt;
       if (this.cb.onPing) this.cb.onPing(rtt);
       return;
@@ -1455,6 +1645,11 @@ export class LanClient {
     if (msg.type === 'wan_status') {
       if (typeof msg.wanUrl === 'string' || msg.wanUrl === null) this.wanUrl = msg.wanUrl;
       if (typeof msg.wanStatus === 'string') this.wanStatus = msg.wanStatus;
+      if (this.isHost && this.wanUrl && this.wanStatus === 'ready') {
+        for (const peer of this.players) {
+          if (peer.id !== this.clientId) this._sendPeerDirect(peer.id, { kind: '__wan_update', url: this.wanUrl });
+        }
+      }
       if (this.cb.onStatusChange) this.cb.onStatusChange();
       if (this.cb.onLobbyUpdate) this.cb.onLobbyUpdate();
       return;
@@ -1469,13 +1664,37 @@ export class LanClient {
       return;
     }
     if (msg.type === 'room_joined') {
+      this._clearResume();
       this.roomCode = msg.code;
+      this.resumeToken = msg.resumeToken || null;
       this.hostId = msg.hostId;
       this.inGame = !!msg.inGame;
       if (this.cb.onRoomJoined) this.cb.onRoomJoined(msg);
       return;
     }
+    if (msg.type === 'room_resumed') {
+      clearTimeout(this._wsReconnectTimer);
+      this._wsReconnectTimer = null;
+      this._wsReconnectStartedAt = 0;
+      this.reconnectingWs = false;
+      this.clientId = msg.clientId;
+      this.roomCode = msg.code;
+      this.hostId = msg.hostId;
+      this.inGame = !!msg.inGame;
+      this.resumeToken = msg.resumeToken;
+      if (this.cb.onRoomResumed) this.cb.onRoomResumed(msg);
+      for (const event of this._pendingRelays.values()) event.sentAt = -Infinity;
+      this._retryPendingRelays();
+      if (this.cb.onStatusChange) this.cb.onStatusChange();
+      return;
+    }
+    if (msg.type === 'resume_failed') {
+      this._finishDisconnected();
+      if (this.cb.onRoomError) this.cb.onRoomError('resume_failed', msg.code);
+      return;
+    }
     if (msg.type === 'room_left') {
+      this._clearResume();
       this._closeAllRtcPeers();
       this.roomCode = null;
       this.hostId = null;
@@ -1522,7 +1741,7 @@ export class LanClient {
         this._handleRtcSignal(msg.from, msg.payload);
         return;
       }
-      if (this.cb.onRelay) this.cb.onRelay(msg.from, msg.payload);
+      this._receiveRelay(msg.from, msg.payload, msg.seq);
     }
   }
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import http from 'node:http';
+import https from 'node:https';
 import net from 'node:net';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -18,6 +19,98 @@ export const DEFAULT_PORT = 18765;
 export const CANDIDATE_PORTS = [18765, 18766, 18767, 18768];
 const MAX_PLAYERS = 4;
 const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export async function probePublicTunnel(url, instanceId) {
+  const httpOk = await new Promise((resolve) => {
+    const req = https.get(new URL('/api/lan-info', url), { timeout: 4500, signal: AbortSignal.timeout(4500), headers: { Accept: 'application/json' } }, (res) => {
+      let raw = '';
+      res.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 32768) { req.destroy(); resolve(false); }
+      });
+      res.on('aborted', () => resolve(false));
+      res.on('error', () => resolve(false));
+      res.on('end', () => {
+        try {
+          const info = JSON.parse(raw);
+          resolve(res.statusCode === 200 && info.app === APP_ID && info.instanceId === instanceId);
+        } catch (_) { resolve(false); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => resolve(false));
+  });
+  if (!httpOk) return false;
+  const pageOk = await new Promise((resolve) => {
+    const signal = AbortSignal.timeout(6000);
+    const checkPage = (target, cookie = '', redirects = 0) => {
+      const req = https.get(target, { signal, headers: {
+        Accept: 'text/html,application/xhtml+xml', 'Accept-Encoding': 'br, gzip',
+        'User-Agent': 'Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36', Cookie: cookie
+      } }, (res) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects < 3) {
+          const next = new URL(res.headers.location, target);
+          res.resume();
+          if (next.origin !== new URL(url).origin) { resolve(false); return; }
+          const cookies = (res.headers['set-cookie'] || []).map((value) => value.split(';')[0]).join('; ');
+          checkPage(next, cookies || cookie, redirects + 1);
+          return;
+        }
+        if (res.statusCode !== 200 || res.headers['x-sanctum-instance'] !== instanceId) {
+          res.destroy();
+          resolve(false);
+          return;
+        }
+        let bytes = 0;
+        res.on('data', (chunk) => {
+          bytes += chunk.length;
+          if (bytes > 2_000_000) { req.destroy(); resolve(false); }
+        });
+        res.on('end', () => resolve(bytes > 0));
+        res.on('aborted', () => resolve(false));
+        res.on('error', () => resolve(false));
+      });
+      req.on('error', () => resolve(false));
+    };
+    checkPage(new URL('/?serveo-skip-browser-warning=true', url));
+  });
+  if (!pageOk) return false;
+  return new Promise((resolve) => {
+    const key = crypto.randomBytes(16).toString('base64');
+    let socket = null;
+    let finished = false;
+    const finish = (ok) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      socket?.destroy();
+      req.destroy();
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), 4500);
+    const req = https.get(new URL('/ws', url), { headers: {
+      Connection: 'Upgrade', Upgrade: 'websocket', 'Sec-WebSocket-Version': '13', 'Sec-WebSocket-Key': key
+    } });
+    req.on('error', () => finish(false));
+    req.on('response', (res) => { res.resume(); finish(false); });
+    req.on('upgrade', (res, upgraded, head) => {
+      socket = upgraded;
+      const expected = crypto.createHash('sha1').update(key + WS_GUID).digest('base64');
+      if (res.headers['sec-websocket-accept'] !== expected) { finish(false); return; }
+      const connection = new WsConnection(socket, 'health-probe');
+      const feed = (chunk) => connection.feed(chunk, (raw) => {
+        try {
+          const welcome = JSON.parse(raw);
+          if (welcome.type === 'welcome') finish(welcome.app === APP_ID && welcome.instanceId === instanceId);
+        } catch (_) { finish(false); }
+      }, () => finish(false));
+      socket.on('data', feed);
+      socket.on('error', () => finish(false));
+      socket.on('close', () => finish(false));
+      if (head.length) feed(head);
+    });
+  });
+}
 
 function parsePortArg() {
   const idx = process.argv.indexOf('--port');
@@ -255,10 +348,12 @@ class WsConnection {
   }
 }
 
-export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableWan = null } = {}) {
+export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableWan = null,
+  resumeGraceMs = 45000, spawnTunnel = spawn, probeTunnel = probePublicTunnel } = {}) {
   const clients = new Map();
   const rooms = new Map();
   const fileCache = new Map();
+  const instanceId = crypto.randomBytes(12).toString('hex');
   let clientSeq = 1;
   const wanAllowed = enableWan !== null
     ? !!enableWan
@@ -270,10 +365,16 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
   let wanProviderIdx = 0;
   let wanRetryTimer = null;
   let wanBootTimer = null;
+  let wanProbeTimer = null;
   let wanClosing = false;
   let lastActiveAt = Date.now();
 
   const WAN_PROVIDERS = [
+    {
+      id: 'cloudflare',
+      command: ['/opt/homebrew/bin/cloudflared', '/usr/local/bin/cloudflared'].find((p) => fs.existsSync(p)) || 'cloudflared',
+      urlRe: /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i
+    },
     {
       id: 'serveo',
       target: 'serveo.net',
@@ -314,6 +415,8 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
   }
 
   function stopWanTunnel(resetToIdle = true) {
+    clearTimeout(wanProbeTimer);
+    wanProbeTimer = null;
     if (wanRetryTimer) {
       clearTimeout(wanRetryTimer);
       wanRetryTimer = null;
@@ -365,9 +468,12 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       provider.target
     ];
 
+    const tunnelArgs = provider.id === 'cloudflare'
+      ? ['tunnel', '--no-autoupdate', '--protocol', 'http2', '--url', `http://127.0.0.1:${p}`]
+      : sshArgs;
     let child;
     try {
-      child = spawn('ssh', sshArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawnTunnel(provider.command || 'ssh', tunnelArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (_) {
       wanStatus = 'error';
       broadcastWanStatus();
@@ -375,20 +481,44 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     }
     wanProc = child;
     let matchedUrl = false;
+    let logTail = '';
+    let candidateUrl = null;
+    let checking = false;
+    let healthFailures = 0;
+
+    const checkCandidate = async () => {
+      if (checking || !candidateUrl || wanProc !== child) return;
+      checking = true;
+      let healthy = false;
+      try { healthy = await probeTunnel(candidateUrl, instanceId); } catch (_) {}
+      checking = false;
+      if (wanProc !== child) return;
+      if (healthy) {
+        healthFailures = 0;
+        if (!matchedUrl) {
+          matchedUrl = true;
+          clearTimeout(wanBootTimer);
+          wanBootTimer = null;
+          wanUrl = candidateUrl;
+          wanStatus = 'ready';
+          broadcastWanStatus();
+        }
+      } else if (matchedUrl && ++healthFailures >= 3) {
+        wanProviderIdx = (wanProviderIdx + 1) % WAN_PROVIDERS.length;
+        ensureWanTunnel({ forceRestart: true, forceAllow });
+        return;
+      }
+      wanProbeTimer = setTimeout(checkCandidate, matchedUrl ? 20000 : 1000);
+      wanProbeTimer.unref?.();
+    };
 
     const onChunk = (buf) => {
       if (wanProc !== child) return;
-      const text = buf.toString('utf8');
-      const m = text.match(provider.urlRe);
-      if (m && !matchedUrl) {
-        matchedUrl = true;
-        if (wanBootTimer) {
-          clearTimeout(wanBootTimer);
-          wanBootTimer = null;
-        }
-        wanUrl = m[0].replace(/\/+$/, '');
-        wanStatus = 'ready';
-        broadcastWanStatus();
+      logTail = (logTail + buf.toString('utf8')).slice(-8192);
+      const m = logTail.match(provider.urlRe);
+      if (m && !candidateUrl) {
+        candidateUrl = m[0].replace(/\/+$/, '');
+        checkCandidate();
       }
     };
     child.stdout.on('data', onChunk);
@@ -396,14 +526,15 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
 
     wanBootTimer = setTimeout(() => {
       if (wanProc === child && !matchedUrl) {
-        wanProviderIdx = (wanProviderIdx + 1) % WAN_PROVIDERS.length;
         try { child.kill('SIGTERM'); } catch (_) {}
       }
-    }, 9500);
+    }, provider.id === 'cloudflare' ? 20000 : 14000);
 
     const onExit = () => {
       if (wanProc !== child) return;
       wanProc = null;
+      clearTimeout(wanProbeTimer);
+      wanProbeTimer = null;
       if (wanBootTimer) {
         clearTimeout(wanBootTimer);
         wanBootTimer = null;
@@ -497,6 +628,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
         ready: p.ready,
         isHost: p.id === room.hostId,
         isWan: !!p.isWan,
+        relayVersion: p.relayVersion || 0,
         reconnecting: !!p.reconnecting
       }))
     };
@@ -540,10 +672,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     }
     room.players.splice(idx, 1);
 
-    if (room.players.length === 0 || room.players.every((p) => p.reconnecting)) {
-      for (const p of room.players) {
-        if (p.graceTimer) clearTimeout(p.graceTimer);
-      }
+    if (room.players.length === 0) {
       rooms.delete(room.code);
       broadcastIdleRoomsList();
       return;
@@ -580,7 +709,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     if (idx === -1) return;
     const player = room.players[idx];
 
-    if (allowGrace && player.resumeToken && (player.isWan || room.inGame)) {
+    if (allowGrace && player.resumeToken) {
       player.reconnecting = true;
       if (player.graceTimer) clearTimeout(player.graceTimer);
       player.graceTimer = setTimeout(() => {
@@ -588,7 +717,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
         if (player.reconnecting) {
           finalizePlayerDeparture(room, player.id);
         }
-      }, 45000);
+      }, resumeGraceMs);
       if (player.graceTimer.unref) player.graceTimer.unref();
       broadcastRoom(room, serializeLobbyState(room), player.id);
       return;
@@ -647,6 +776,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
             classId,
             ready: true,
             isWan: !!(conn.isWan || msg.isWan),
+            relayVersion: msg.relayVersion === 1 ? 1 : 0,
             resumeToken,
             reconnecting: false,
             graceTimer: null
@@ -684,6 +814,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
         return;
       }
       const player = room.players[slot];
+      if (conn.roomCode && conn.id !== player.id) removeClientFromRoom(conn);
       if (player.graceTimer) {
         clearTimeout(player.graceTimer);
         player.graceTimer = null;
@@ -709,6 +840,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
         slot,
         themeIdx: player.themeIdx,
         inGame: room.inGame,
+        lastFloorInit: room.lastFloorInit,
         resumeToken: player.resumeToken
       });
       broadcastRoom(room, serializeLobbyState(room));
@@ -741,6 +873,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
         classId,
         ready: !!msg.autoReady || room.inGame,
         isWan: !!(conn.isWan || msg.isWan),
+        relayVersion: msg.relayVersion === 1 ? 1 : 0,
         resumeToken,
         reconnecting: false,
         graceTimer: null
@@ -769,6 +902,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
           classId: newPlayer.classId,
           ready: newPlayer.ready,
           isHost: false,
+          relayVersion: newPlayer.relayVersion,
           isWan: !!newPlayer.isWan
         },
         playerCount: room.players.length
@@ -847,7 +981,8 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       const envelope = {
         type: 'relay',
         from: conn.id,
-        payload
+        payload,
+        ...(Number.isSafeInteger(msg.seq) && msg.seq > 0 ? { seq: msg.seq } : {})
       };
       const target = msg.target || 'others';
       if (target === 'all') {
@@ -884,6 +1019,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       res.end(JSON.stringify({
         ok: true,
         app: APP_ID,
+        instanceId,
         port: p,
         lanIps: info.ips,
         urls: info.urls,
@@ -924,6 +1060,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       let bodyBuf = asset.raw;
       const headers = {
         'Content-Type': 'text/html; charset=utf-8',
+        'X-Sanctum-Instance': instanceId,
         'Cache-Control': 'no-store',
         'Vary': 'Accept-Encoding'
       };
@@ -944,7 +1081,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     res.end('Not Found');
   });
 
-  server.on('upgrade', (req, socket) => {
+  server.on('upgrade', (req, socket, head) => {
     const key = req.headers['sec-websocket-key'];
     if (!key) {
       socket.destroy();
@@ -972,6 +1109,8 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     conn.send({
       type: 'welcome',
       app: APP_ID,
+      relayVersion: 1,
+      instanceId,
       clientId,
       isWan: conn.isWan,
       lanUrls: info.urls,
@@ -993,11 +1132,15 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
     socket.on('close', cleanup);
     socket.on('end', cleanup);
     socket.on('error', cleanup);
+    if (head?.length) conn.feed(head, (text) => handleWsMessage(conn, text), cleanup);
   });
 
   const shutdownWan = () => {
     wanClosing = true;
     clearInterval(idleSweepTimer);
+    for (const room of rooms.values()) {
+      for (const player of room.players) clearTimeout(player.graceTimer);
+    }
     stopWanTunnel(false);
   };
   server.on('close', shutdownWan);

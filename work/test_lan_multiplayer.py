@@ -270,7 +270,7 @@ def main():
             share_url = p1.text_content('#lan-share-url-val').strip()
             assert len(room_code) == 4, f'Expected 4-char room code, got {room_code}'
             assert f'room={room_code}' in share_url, f'Expected invite URL with room code, got {share_url}'
-            assert '1.00x' in p1.text_content('#lan-scale-banner')
+            assert p1.evaluate('window.__SANCTUM__.lan.playerCount') == 1
             print('Created Room:', room_code, '| Share URL:', share_url)
 
             # 2. P2 joins via invite URL (?room=CODE), P3 joins via room list, P4 joins via code
@@ -300,6 +300,8 @@ def main():
             assert '满员' in err_txt or 'full' in err_txt.lower(), f'Expected full error on P2 UI, got: {err_txt}'
 
             # Release temporary slot and verify 2P / 3P / 4P scaling progression with only 2 browsers!
+            p5_temp.send_json({'type': 'leave_room'})
+            p5_temp.wait_for_msg('room_left')
             p5_temp.close()
             ws_peers.remove(p5_temp)
             p3_ws.send_json({'type': 'leave_room'})

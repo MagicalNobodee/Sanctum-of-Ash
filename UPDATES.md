@@ -6,6 +6,7 @@
 
 | 时间（UTC+8） | 开发者 | 任务 | 一句话说明 |
 | --- | --- | --- | --- |
+| 2026-11-15 18:16 | MagicalNobodee · Codex | [修复异地联机恢复](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9) | 补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。 |
 | 2026-11-15 18:14 | MagicalNobodee · Codex | [调整紫晶掉落](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16) | 普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。 |
 | 2026-11-15 18:09 | MagicalNobodee · Codex | [首页展示最近更新](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/18) | README 顶部新增最近 5 条更新卡片，下面可打开完整列表，原项目介绍保留在下方。 |
 | 2026-11-15 17:44 | MagicalNobodee · Codex | [缩短近战攻击距离](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/14) | 全部 7 把近战武器及砸地连招的攻击距离缩短 20%，保留武器长短差异，更新双语说明并通过战斗测试。 |
