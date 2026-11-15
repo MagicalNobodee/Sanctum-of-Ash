@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 
 from playwright.sync_api import sync_playwright
+from platform_test_support import chromium_args
 from test_lan_multiplayer import check_system_headroom
 
 
@@ -57,8 +58,7 @@ def main():
         base = f'http://127.0.0.1:{port}'
         with sync_playwright() as p, tempfile.TemporaryDirectory(prefix='sanctum-recovery-') as shots:
             errors = []
-            browser = p.chromium.launch(headless=True, args=[
-                '--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist'])
+            browser = p.chromium.launch(headless=True, args=chromium_args())
             try:
                 pages = []
                 for index in range(2):

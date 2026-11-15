@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 import os
 import time
 from pathlib import Path
@@ -30,7 +31,7 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
-            args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist'],
+            args=chromium_args(),
         )
         context = browser.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=2)
         page = context.new_page()

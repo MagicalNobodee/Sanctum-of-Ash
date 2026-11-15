@@ -5,6 +5,12 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      browser_smoke:
+        description: Run optional low-resolution browser smoke checks
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,10 +44,43 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --prefix work
       - name: Test multiplayer watchdog
-        run: node --test work/test_multiplayer_watchdog.mjs
+        run: node --test work/test_multiplayer_watchdog.mjs work/test_platform_runtime.mjs
       - name: Rebuild game and biome showcase
         run: |
           npm run build --prefix work
           npm run build:biomes --prefix work
       - name: Ensure generated files are committed
         run: git diff --exit-code -- SanctumOfAsh_3DRoguelike.html outputs/sanctum-of-ash.html outputs/biome-showcase.html
+  platforms:
+    name: platform (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+      - name: Build on minimum supported Node.js
+        run: |
+          npm ci --prefix work
+          npm run build --prefix work
+          npm run build:biomes --prefix work
+          git diff --exit-code -- SanctumOfAsh_3DRoguelike.html outputs/sanctum-of-ash.html outputs/biome-showcase.html
+      - name: Test native runtime and multiplayer
+        run: node --experimental-websocket --test work/test_platform_runtime.mjs work/test_multiplayer_watchdog.mjs
+      - name: Install browser tests
+        if: github.event_name == 'workflow_dispatch' && inputs.browser_smoke
+        run: |
+          python -m pip install -r work/requirements.txt
+          python -m playwright install chromium
+      - name: Test platform helpers
+        run: python -m unittest discover -s work -p test_platform_support.py
+      - name: Test offline game and HTTP lobby (one page at a time)
+        if: github.event_name == 'workflow_dispatch' && inputs.browser_smoke
+        run: python work/test_platform_browser.py

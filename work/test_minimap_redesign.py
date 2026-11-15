@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -9,7 +10,7 @@ SHOT_DIR.mkdir(parents=True, exist_ok=True)
 with sync_playwright() as p:
     browser = p.chromium.launch(
         headless=True,
-        args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+        args=chromium_args()
     )
     ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=2)
     page = ctx.new_page()
@@ -23,7 +24,7 @@ with sync_playwright() as p:
         else None
     )
 
-    page.goto(f'file://{OUT_HTML}', wait_until='domcontentloaded')
+    page.goto(OUT_HTML.as_uri(), wait_until='domcontentloaded')
     page.wait_for_function('() => window.__SANCTUM__ && window.__SANCTUM__.bootComplete === true', timeout=15000)
     page.wait_for_timeout(350)
 

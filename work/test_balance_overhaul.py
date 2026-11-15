@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 import os
 import socket
 import subprocess
@@ -195,7 +196,7 @@ def run_solo_checks(p):
     errors = []
     browser = p.chromium.launch(
         headless=True,
-        args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist'],
+        args=chromium_args(),
     )
     ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=2)
     page = ctx.new_page()
@@ -685,7 +686,7 @@ def run_coop_checks(p):
         errors = []
         browser = p.chromium.launch(
             headless=True,
-            args=['--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist'],
+            args=chromium_args(),
         )
         c1 = browser.new_context(viewport={'width': 1280, 'height': 800})
         c2 = browser.new_context(viewport={'width': 1280, 'height': 800})

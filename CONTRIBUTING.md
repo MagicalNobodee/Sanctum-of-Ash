@@ -132,19 +132,22 @@ HANDOFF #123
 
 所有 PR 都运行 `collaboration / verify` 自动检查：改动记录格式与追加规则、协作检查器自测、联机轻量单测、服务语法检查、两种构建及三个生成文件的一致性。自动检查不证明游戏画面或联机实玩正确。
 
+默认只做足以验证本次改动的最小检查，不把下表中的历史浏览器脚本当成每次交付的必跑清单。尤其是启动器、平台兼容、后台与文档改动，不要求渲染游戏。完整渲染/多楼层/长时间联机回归仅在用户明确要求，或已定位的具体问题确实无法通过轻量验证覆盖时运行。需要浏览器时，优先一个浏览器、低绘图分辨率、一项短流程；不为收集更多证据反复跑重测试，发现卡顿立即停止。
+
 | 改动范围 | 除自动检查外需要的验证 |
 | --- | --- |
 | 纯文档、任务模板 | 检查链接、命令是否符合当前仓库；不要求运行游戏 |
-| 游戏源码 / 模板 / 依赖 / 构建 | `npm ci --prefix work`；`npm run build --prefix work`；`npm run build:biomes --prefix work`；执行对应功能测试 |
-| 数值 / 战斗 / 难度 | `python3 work/test_balance_overhaul.py`，检查实际新规则的断言，不机械接受旧断言 |
-| 联机 / 掉落 / 房间同步 | `node --test work/test_multiplayer_watchdog.mjs`；按范围串行运行 `python3 work/test_coop_sync_rules.py`、`python3 work/test_lan_multiplayer.py` |
-| 地牢 / 主题 / 接缝 | `python3 work/test_biomes.py`，并验证受影响地形 |
-| 职业 / 武器 / 楼层 | 按范围选择 `work/test_class_roster_12.py`、`work/test_4floor_arsenal.py`；先核对脚本与当前界面是否一致 |
+| 游戏源码 / 模板 / 依赖 / 构建 | 两种构建与受影响逻辑的轻量检查；依赖变化时运行 `npm ci --prefix work`。画面变化才补一次短小的画面检查 |
+| 数值 / 战斗 / 难度 | 优先精确数值断言或单测；确需实玩时只查变更行为，`work/test_balance_overhaul.py` 完整回归按需运行 |
+| 启动器 / 平台 / 后台 | `node --test work/test_platform_runtime.mjs`，无浏览器验证真实启动、路径、HTTP 与入口传参 |
+| 联机 / 掉落 / 房间同步 | `node --test work/test_multiplayer_watchdog.mjs`（Node.js 20 加 `--experimental-websocket`）；需要场景验证时只选对应短流程，完整 coop/LAN 回归按需运行 |
+| 地牢 / 主题 / 接缝 | 优先生成逻辑与接缝数据检查；`work/test_biomes.py` 全主题画面回归按需运行 |
+| 职业 / 武器 / 楼层 | 优先相关逻辑断言，必要时只验证一个受影响流程；完整职业/四层脚本按需运行 |
 | 协作检查脚本 / 自动检查 | `python3 -m unittest discover -s scripts -p 'test_*.py'`；验证应通过和应拒绝两种情况，包含开工基线过期与获取远端失败 |
 
 浏览器测试环境安装见 [README](README.md#常用命令)。部分历史测试使用旧界面或固定端口，运行前先读脚本，确保不会复用/停止其他任务的服务；必要时先给脚本增加独立端口。不要同时执行多组浏览器测试。测试断言过期时明确说明并按已确认的新规则修正，不跳过后宣称通过。
 
-自动构建会更新 `outputs/sanctum-of-ash.html`、根目录 `SanctumOfAsh_3DRoguelike.html` 和 `outputs/biome-showcase.html`。CI 重建后发现差异就失败；在本地重新构建并提交差异。CI 不启动浏览器或常驻服务。
+自动构建会更新 `outputs/sanctum-of-ash.html`、根目录 `SanctumOfAsh_3DRoguelike.html` 和 `outputs/biome-showcase.html`。CI 重建后发现差异就失败；在本地重新构建并提交差异。默认 CI 不启动浏览器，只短暂启动自己的测试服务并自动关闭；需要画面验证时，手动触发 `collaboration` 并勾选 `browser_smoke`，在远端运行低负载冒烟测试。
 
 ## 更新一览维护规则
 

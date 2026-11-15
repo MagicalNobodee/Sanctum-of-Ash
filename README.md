@@ -6,6 +6,11 @@
   </thead>
   <tbody>
     <tr>
+      <td valign="top">2026-11-15<br><sub>18:55</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22"><strong>补齐 Mac 与 Windows 兼容</strong></a><br>新增双平台启动入口并修复后台兼容问题；两平台默认做轻量验证，渲染和完整游戏回归改为按需运行。</td>
+    </tr>
+    <tr>
       <td valign="top">2026-11-15<br><sub>18:16</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9"><strong>修复异地联机恢复</strong></a><br>补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。</td>
@@ -25,11 +30,6 @@
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/14"><strong>缩短近战攻击距离</strong></a><br>全部 7 把近战武器及砸地连招的攻击距离缩短 20%，保留武器长短差异，更新双语说明并通过战斗测试。</td>
     </tr>
-    <tr>
-      <td valign="top">2026-11-15<br><sub>17:13</sub></td>
-      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11"><strong>整理游戏顶部界面</strong></a><br>右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。</td>
-    </tr>
   </tbody>
 </table>
 <p align="right"><a href="UPDATES.md"><strong>查看完整更新列表 →</strong></a></p>
@@ -41,11 +41,15 @@
 
 ## 开始游戏
 
-下载完整仓库后，用现代桌面浏览器打开 `outputs/sanctum-of-ash.html`，即可离线单人游玩。根目录的 `SanctumOfAsh_3DRoguelike.html` 是同一份游戏，构建时会同步更新。
+macOS 和 Windows 均可用支持 WebGL 2 的现代桌面浏览器游玩，建议使用新版 Chrome 或 Edge。下载完整仓库后，打开 `outputs/sanctum-of-ash.html`，即可离线单人游玩。根目录的 `SanctumOfAsh_3DRoguelike.html` 是同一份游戏，构建时会同步更新。
 
 联机需要安装 Node.js 20 或更新版本。在项目根目录运行 `node lan-server.mjs --open`，再把游戏内显示的局域网地址分享给同一网络的朋友。默认使用 18765 端口，占用时会尝试后续三个端口。
 
 macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启动器会尝试启动联机服务；找不到 Node.js 时会打开离线游戏。首次运行下载的启动器时，可能需要在系统设置中允许打开。
+
+Windows 用户双击 `outputs/Start-Sanctum.cmd`；macOS 也可双击 `outputs/Start-Sanctum.command`。这两个入口会打开游戏并在命令窗口运行联机服务，作为房主时保留窗口，按 Ctrl+C 停止。未安装 Node.js 时提示安装并打开离线游戏。完整目录需保留，不能只复制启动器；单人离线只需 HTML。
+
+Windows 首次启动联机时，如果系统询问是否允许 Node.js 通过防火墙，请允许当前可信的专用网络。双方应在可互访的同一网络；访客 Wi-Fi、网络隔离和系统防火墙可能阻止局域网连接。SSH 公网通道需要 `ssh`（macOS 自带，Windows 可安装系统的 OpenSSH 客户端）；缺少它不影响离线与局域网。
 
 异地好友使用大厅里的“异地好友网址”。房主会依次尝试免费的 Cloudflare、Serveo、localhost.run 通道，确认网页和联机连接确实能返回本机后才显示可用；Cloudflare 需要本机已安装 `cloudflared`，缺失时自动尝试后续通道。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
 
@@ -60,6 +64,7 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 ## 目录结构
 
 - `outputs/余烬圣所 · Sanctum of Ash.app`：双击即玩启动器（自动检测并确保局域网联机服务后台运行后打开游戏）
+- `outputs/Start-Sanctum.cmd` / `outputs/Start-Sanctum.command`：Windows / macOS 命令窗口启动入口
 - `outputs/sanctum-of-ash.html`：独立可运行的完整正式版游戏文件（直接双击即可单人或局域网建房联机，内置自动发现与本地房间兜底）
 - `lan-server.mjs`：零依赖后台局域网联机服务（默认端口 18765，支持自动避让冲突端口与已运行实例复用）
 - `outputs/biome-showcase.html`：独立 8 套主题地牢交互式预览与接缝检查图鉴
@@ -86,13 +91,16 @@ npm ci --prefix work
 npm run build --prefix work
 npm run build:biomes --prefix work
 
-# 安装自动测试依赖
+# 默认最小验证：不启动浏览器
+node --test work/test_platform_runtime.mjs
+
+# 仅需要浏览器验证时，macOS 安装测试依赖
 python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r work/requirements.txt
 python3 -m playwright install chromium
 
-# 串行运行，避免同时启动多组浏览器
+# 以下完整回归仅按需选择，不是每次修改的必跑清单；串行运行
 python3 work/test_balance_overhaul.py
 python3 work/test_coop_sync_rules.py
 python3 work/test_lan_multiplayer.py
@@ -103,4 +111,13 @@ python3 work/test_network_recovery.py --require-p2p
 python3 work/test_wan_multiplayer.py
 ```
 
-部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随游戏规则更新。现有浏览器测试使用 macOS 图形参数；其他系统可能需要调整浏览器启动参数。仓库不会自动安装开机后台服务。
+Windows PowerShell 的测试环境安装与运行（不需要修改执行策略或激活脚本）：
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r work/requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+.\.venv\Scripts\python.exe work/test_platform_browser.py
+```
+
+默认使用构建、轻量单测和无浏览器的真实后台检查；Windows/macOS 自动检查均不默认渲染游戏。需要时可手动触发 `collaboration` 工作流并勾选 `browser_smoke`，在远端运行低负载画面检查。本机按需运行 `python3 work/test_platform_browser.py`，只使用一个浏览器、同时一个页面，验证离线开局和网页建房，不连跑完整回归。双人消息和恢复由无画面的服务测试覆盖。它不代替不同电脑之间的真实网络、显卡与系统弹窗验收。部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随规则更新。仓库不会自动安装开机后台服务。

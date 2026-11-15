@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args
 import os
 import time
 from pathlib import Path
@@ -23,14 +24,14 @@ def canvas_non_empty_pixels(page, canvas_id):
     }}''')
 
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True, args=['--use-gl=angle', '--enable-webgl'])
+    browser = p.chromium.launch(headless=True, args=chromium_args())
     ctx = browser.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=2)
     page = ctx.new_page()
     errors = []
     page.on('pageerror', lambda e: errors.append(f'PAGEERROR: {e}'))
     page.on('console', lambda m: errors.append(f'CONSOLE_ERR: {m.text}') if m.type == 'error' else None)
 
-    target_url = f'file://{OUT_HTML}'
+    target_url = OUT_HTML.as_uri()
     page.goto(target_url, wait_until='domcontentloaded')
 
     # 1. Inspect Boot Progress Screen right after load

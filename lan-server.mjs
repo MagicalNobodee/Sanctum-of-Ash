@@ -458,7 +458,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       '-T',
       '-C',
       '-o', 'StrictHostKeyChecking=no',
-      '-o', 'UserKnownHostsFile=/dev/null',
+      '-o', `UserKnownHostsFile=${os.devNull}`,
       '-o', 'TCPKeepAlive=yes',
       '-o', 'ServerAliveInterval=12',
       '-o', 'ServerAliveCountMax=4',
@@ -473,7 +473,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       : sshArgs;
     let child;
     try {
-      child = spawnTunnel(provider.command || 'ssh', tunnelArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawnTunnel(provider.command || 'ssh', tunnelArgs, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     } catch (_) {
       wanStatus = 'error';
       broadcastWanStatus();
@@ -1176,18 +1176,21 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
   return { server, start, rooms, clients, ensureWanTunnel, stopWanTunnel, getWanState: () => ({ wanStatus, wanUrl }) };
 }
 
+export function browserCommand(url, platform = process.platform) {
+  if (platform === 'win32') return ['rundll32.exe', ['url.dll,FileProtocolHandler', url]];
+  return [platform === 'darwin' ? 'open' : 'xdg-open', [url]];
+}
+
 function openBrowserUrl(url) {
-  const cmd = process.platform === 'darwin'
-    ? 'open'
-    : (process.platform === 'win32' ? 'cmd' : 'xdg-open');
-  const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url];
+  const [cmd, args] = browserCommand(url);
   try {
-    const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+    const child = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    child.on('error', () => console.warn(`[Sanctum of Ash] Open in your browser: ${url}`));
     child.unref();
   } catch (_) {}
 }
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
 if (isMain) {
   const { port: requestedPort, explicit } = parsePortArg();
   const shouldOpen = process.argv.includes('--open');

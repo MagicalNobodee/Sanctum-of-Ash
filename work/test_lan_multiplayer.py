@@ -1,3 +1,4 @@
+from platform_test_support import chromium_args, available_memory_mb
 import base64
 from pathlib import Path
 import json
@@ -22,29 +23,11 @@ SAFETY_RESERVE_MB = 900
 
 def check_system_headroom(browser_count=MAX_BROWSERS):
     assert browser_count <= MAX_BROWSERS, f'Refusing to spawn {browser_count} browsers (cap={MAX_BROWSERS})'
-    vm_out = subprocess.check_output(['vm_stat'], text=True)
-    page_size = 16384
-    m_ps = re.search(r'page size of (\d+) bytes', vm_out)
-    if m_ps:
-        page_size = int(m_ps.group(1))
-
-    def pages_of(label):
-        m = re.search(rf'{re.escape(label)}:\s+(\d+)\.', vm_out)
-        return int(m.group(1)) if m else 0
-
-    reclaimable_pages = (
-        pages_of('Pages free')
-        + pages_of('Pages inactive')
-        + pages_of('Pages speculative')
-        + pages_of('Pages purgeable')
-    )
-    avail_mb = (reclaimable_pages * page_size) / (1024 * 1024)
+    avail_mb = available_memory_mb()
     estimated_need_mb = browser_count * EST_BROWSER_MB + EST_NODE_MB
-    load_out = subprocess.check_output(['sysctl', '-n', 'vm.loadavg'], text=True).strip()
     print(
         f'[Resource Guard] Reclaimable RAM: {avail_mb:.0f} MB | '
-        f'Est. test footprint ({browser_count} browsers + 1 Node): ~{estimated_need_mb} MB | '
-        f'LoadAvg: {load_out}'
+        f'Est. test footprint ({browser_count} browsers + 1 Node): ~{estimated_need_mb} MB'
     )
     if avail_mb < estimated_need_mb + SAFETY_RESERVE_MB:
         raise RuntimeError(
@@ -231,18 +214,18 @@ def main():
                     raise RuntimeError(f'Browser cap ({MAX_BROWSERS}) exceeded when spawning {label}')
                 br = p.chromium.launch(
                     headless=True,
-                    args=['--no-proxy-server', '--use-angle=metal', '--enable-webgl', '--ignore-gpu-blocklist']
+                    args=chromium_args()
                 )
                 browsers.append(br)
                 vp = {'width': 1240, 'height': 800} if is_primary else {'width': 900, 'height': 580}
-                dpr = 1.0
+                dpr = 0.5
                 ctx = br.new_context(viewport=vp, device_scale_factor=dpr)
                 pg = ctx.new_page()
                 pg._own_browser = br
                 pg.on('pageerror', lambda e, lb=label: all_errors.append(f'[{lb}] PAGEERROR: {e}'))
                 pg.on('console', lambda m, lb=label: all_errors.append(f'[{lb}] CONSOLE_{m.type}: {m.text}') if m.type == 'error' else None)
                 sep = '&' if '?' in path else '?'
-                full_path = f'{path}{sep}gfx=low&charTimer=3'
+                full_path = f'{path}{sep}gfx=high&charTimer=3'
                 pg.goto(f'{BASE_URL}{full_path}', wait_until='domcontentloaded', timeout=30000)
                 pg.wait_for_function('() => window.__SANCTUM__?.bootComplete === true', timeout=30000)
                 if pg.locator('#btn-enter-sanctum').is_visible():
@@ -489,7 +472,8 @@ def main():
                 g.hero.invuln = 0;
                 g.damageHero(9999, g.hero.x + 1, g.hero.z);
             }""")
-            p1.wait_for_timeout(320)
+            p2.wait_for_function('''() => window.__SANCTUM__.hero.downed &&
+                !document.getElementById('downed-hud-banner').classList.contains('hidden')''', timeout=10000)
             p2_down_state = p2.evaluate("""() => ({
                 mode: window.__SANCTUM__.mode,
                 downed: window.__SANCTUM__.hero.downed,
