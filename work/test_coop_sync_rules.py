@@ -69,7 +69,7 @@ def main():
                     args=chromium_args()
                 )
                 browsers.append(br)
-                ctx = br.new_context(viewport={'width': 960, 'height': 600})
+                ctx = br.new_context(viewport={'width': 960, 'height': 600}, device_scale_factor=0.5)
                 pg = ctx.new_page()
                 pg.on('pageerror', lambda e: errors.append(f'[{label}] {e}'))
                 pg.on('console', lambda m: errors.append(f'[{label}] {m.text}') if m.type == 'error' else None)
@@ -78,14 +78,14 @@ def main():
                 pages.append(pg)
                 return pg
 
-            p1 = spawn_page('Host_P1', '/?gfx=low')
+            p1 = spawn_page('Host_P1', '/?gfx=high')
             p1.evaluate('() => window.__SANCTUM__.coopOpenLobby(false)')
             p1.fill('#lan-name-input', 'HostAlpha')
             p1.click('#btn-lan-create')
             p1.wait_for_function('() => window.__SANCTUM__.lan.inRoom && !!window.__SANCTUM__.lan.roomCode')
             code = p1.evaluate('() => window.__SANCTUM__.lan.roomCode')
 
-            p2 = spawn_page('Client_P2', f'/?room={code}&gfx=low')
+            p2 = spawn_page('Client_P2', f'/?room={code}&gfx=high')
             p2.fill('#lan-name-input', 'ClientBravo')
             p2.click('#btn-lan-join')
             p2.wait_for_function('() => window.__SANCTUM__.lan.inRoom')
@@ -95,6 +95,9 @@ def main():
 
             p1.wait_for_function('() => window.__SANCTUM__.mode === "explore" && !!window.__SANCTUM__.dungeon')
             p2.wait_for_function('() => window.__SANCTUM__.mode === "explore" && !!window.__SANCTUM__.dungeon')
+            for page in (p1, p2):
+                # This suite checks world/loot rules; incidental combat must not kill the fixtures.
+                page.evaluate('() => { window.__SANCTUM__.hero.invuln = 9999; }')
             p1.wait_for_timeout(350)
 
             # 1. Verify 100% identical authoritative map graph & interactable layout

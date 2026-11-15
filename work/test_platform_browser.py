@@ -42,6 +42,10 @@ def main():
                     page = context.new_page()
                     page.on('pageerror', lambda error: errors.append(str(error)))
                     page.goto(url, wait_until='load')
+                    if os.environ.get('CI'):
+                        page.wait_for_function('() => window.__SANCTUM__?.moonLight', timeout=60000)
+                        # Software-only runners have no GPU; keep real shadows at a smaller resolution.
+                        page.evaluate('() => window.__SANCTUM__.moonLight.shadow.mapSize.set(128, 128)')
                     page.wait_for_function('() => window.__SANCTUM__?.bootComplete', timeout=60000)
                     return context, page
 

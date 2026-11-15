@@ -218,14 +218,14 @@ def main():
                 )
                 browsers.append(br)
                 vp = {'width': 1240, 'height': 800} if is_primary else {'width': 900, 'height': 580}
-                dpr = 1.0
+                dpr = 0.5
                 ctx = br.new_context(viewport=vp, device_scale_factor=dpr)
                 pg = ctx.new_page()
                 pg._own_browser = br
                 pg.on('pageerror', lambda e, lb=label: all_errors.append(f'[{lb}] PAGEERROR: {e}'))
                 pg.on('console', lambda m, lb=label: all_errors.append(f'[{lb}] CONSOLE_{m.type}: {m.text}') if m.type == 'error' else None)
                 sep = '&' if '?' in path else '?'
-                full_path = f'{path}{sep}gfx=low&charTimer=3'
+                full_path = f'{path}{sep}gfx=high&charTimer=3'
                 pg.goto(f'{BASE_URL}{full_path}', wait_until='domcontentloaded', timeout=30000)
                 pg.wait_for_function('() => window.__SANCTUM__?.bootComplete === true', timeout=30000)
                 if pg.locator('#btn-enter-sanctum').is_visible():
@@ -472,7 +472,8 @@ def main():
                 g.hero.invuln = 0;
                 g.damageHero(9999, g.hero.x + 1, g.hero.z);
             }""")
-            p1.wait_for_timeout(320)
+            p2.wait_for_function('''() => window.__SANCTUM__.hero.downed &&
+                !document.getElementById('downed-hud-banner').classList.contains('hidden')''', timeout=10000)
             p2_down_state = p2.evaluate("""() => ({
                 mode: window.__SANCTUM__.mode,
                 downed: window.__SANCTUM__.hero.downed,
