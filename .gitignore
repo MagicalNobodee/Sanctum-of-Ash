@@ -1,0 +1,13 @@
+node_modules/
+.DS_Store
+__pycache__/
+*.py[cod]
+*.log
+work/logs/
+work/*.png
+work/biome_shots/
+work/ui_redesign_shots/
+.venv/
+.env
+.env.*
+!.env.example

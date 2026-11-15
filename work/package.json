@@ -1,0 +1,16 @@
+{
+  "name": "sanctum-of-ash",
+  "version": "1.0.0",
+  "description": "Sanctum of Ash - Photorealistic 3D Roguelike Dungeon Crawler",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:biomes": "node build_biome_showcase.mjs",
+    "lan": "node ../lan-server.mjs"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}

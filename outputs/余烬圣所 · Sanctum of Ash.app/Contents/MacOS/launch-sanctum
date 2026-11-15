@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+OUT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+ROOT_DIR="$(cd "$OUT_DIR/.." && pwd)"
+
+for p in 18765 18766 18767 18768; do
+  if curl -fs --max-time 0.5 "http://127.0.0.1:${p}/api/lan-info" | grep -q 'sanctum-of-ash-lan'; then
+    open "http://127.0.0.1:${p}/"
+    exit 0
+  fi
+done
+
+NODE_BIN=""
+for cand in \
+  "$HOME/.nvm/versions/node/v25.8.0/bin/node" \
+  "$(ls -1d "$HOME"/.nvm/versions/node/*/bin/node 2>/dev/null | tail -n 1)" \
+  "/opt/homebrew/bin/node" \
+  "/usr/local/bin/node" \
+  "$(command -v node 2>/dev/null || true)"; do
+  if [ -n "$cand" ] && [ -x "$cand" ]; then
+    NODE_BIN="$cand"
+    break
+  fi
+done
+
+if [ -n "$NODE_BIN" ] && [ -f "$ROOT_DIR/lan-server.mjs" ]; then
+  mkdir -p "$ROOT_DIR/work/logs"
+  nohup "$NODE_BIN" "$ROOT_DIR/lan-server.mjs" >> "$ROOT_DIR/work/logs/lan-server.log" 2>> "$ROOT_DIR/work/logs/lan-server.err.log" &
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 0.2
+    for p in 18765 18766 18767 18768; do
+      if curl -fs --max-time 0.4 "http://127.0.0.1:${p}/api/lan-info" | grep -q 'sanctum-of-ash-lan'; then
+        open "http://127.0.0.1:${p}/"
+        exit 0
+      fi
+    done
+  done
+fi
+
+open "$OUT_DIR/sanctum-of-ash.html"
