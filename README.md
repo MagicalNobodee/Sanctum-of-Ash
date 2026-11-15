@@ -11,6 +11,11 @@
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/22"><strong>补齐 Mac 与 Windows 兼容</strong></a><br>新增双平台启动入口，修复后台路径和测试限制，并加入两平台离线开局与双人联机自动检查。</td>
     </tr>
     <tr>
+      <td valign="top">2026-11-15<br><sub>18:16</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9"><strong>修复异地联机恢复</strong></a><br>补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。</td>
+    </tr>
+    <tr>
       <td valign="top">2026-11-15<br><sub>18:14</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16"><strong>调整紫晶掉落</strong></a><br>普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。</td>
@@ -24,11 +29,6 @@
       <td valign="top">2026-11-15<br><sub>17:44</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/14"><strong>缩短近战攻击距离</strong></a><br>全部 7 把近战武器及砸地连招的攻击距离缩短 20%，保留武器长短差异，更新双语说明并通过战斗测试。</td>
-    </tr>
-    <tr>
-      <td valign="top">2026-11-15<br><sub>17:13</sub></td>
-      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11"><strong>整理游戏顶部界面</strong></a><br>右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。</td>
     </tr>
   </tbody>
 </table>
@@ -49,9 +49,11 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 
 Windows 用户双击 `outputs/Start-Sanctum.cmd`；macOS 也可双击 `outputs/Start-Sanctum.command`。这两个入口会打开游戏并在命令窗口运行联机服务，作为房主时保留窗口，按 Ctrl+C 停止。未安装 Node.js 时提示安装并打开离线游戏。完整目录需保留，不能只复制启动器；单人离线只需 HTML。
 
-Windows 首次启动联机时，如果系统询问是否允许 Node.js 通过防火墙，请允许当前可信的专用网络。双方应在可互访的同一网络；访客 Wi-Fi、网络隔离和系统防火墙可能阻止局域网连接。公网通道还需要 `ssh`（macOS 自带，Windows 可安装系统的 OpenSSH 客户端）；缺少它不影响离线与局域网。
+Windows 首次启动联机时，如果系统询问是否允许 Node.js 通过防火墙，请允许当前可信的专用网络。双方应在可互访的同一网络；访客 Wi-Fi、网络隔离和系统防火墙可能阻止局域网连接。SSH 公网通道需要 `ssh`（macOS 自带，Windows 可安装系统的 OpenSSH 客户端）；缺少它不影响离线与局域网。
 
-公网邀请使用外部 SSH 隧道服务，需要联网且取决于服务可用性。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
+异地好友使用大厅里的“异地好友网址”。房主会依次尝试免费的 Cloudflare、Serveo、localhost.run 通道，确认网页和联机连接确实能返回本机后才显示可用；Cloudflare 需要本机已安装 `cloudflared`，缺失时自动尝试后续通道。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
+
+直连可用时自动加速，无法直连时使用网页通道转发动作。短暂断网会尝试恢复原房间，服务端保留原名额 45 秒；主动退出不重连。免费通道可能慢、失效或换网址，无法保证大陆与香港的所有网络均低延迟；若通道网址已变且直连也已断开，好友需要房主的新邀请链接。更新后房主和好友都重新打开游戏，才能完整使用新的恢复功能。
 
 ## 多人开发与 Agent 协作
 
@@ -99,6 +101,11 @@ python3 -m playwright install chromium
 python3 work/test_balance_overhaul.py
 python3 work/test_coop_sync_rules.py
 python3 work/test_lan_multiplayer.py
+python3 work/test_network_recovery.py
+# 要求真实直连也通过时使用：
+python3 work/test_network_recovery.py --require-p2p
+# 需要外网，验证免费邀请网址及实际动作转发：
+python3 work/test_wan_multiplayer.py
 ```
 
 Windows PowerShell 的测试环境安装与运行（不需要修改执行策略或激活脚本）：

@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import time
 import urllib.request
+from test_lan_multiplayer import check_system_headroom
 from playwright.sync_api import sync_playwright
 
 PORT = 18796
@@ -27,6 +28,7 @@ def wait_for_server(url, timeout=8.0):
 
 
 def main():
+    check_system_headroom(2)
     proc = subprocess.Popen(
         [NODE_BIN, SERVER_PATH, '--port', str(PORT), '--wan'],
         stdout=subprocess.DEVNULL,
@@ -87,7 +89,7 @@ def main():
                 # Wait for automatic public HTTPS WAN URL generation
                 p1.wait_for_function(
                     '() => { const el = document.getElementById("wan-share-url-val"); return el && el.textContent.startsWith("https://"); }',
-                    timeout=20000
+                    timeout=130000
                 )
                 wan_invite_url = p1.text_content('#wan-share-url-val').strip()
                 assert wan_invite_url.startswith('https://') and room_code in wan_invite_url, (
@@ -121,15 +123,13 @@ def main():
                 p1.wait_for_function('() => window.__SANCTUM__.lan.playerCount === 2', timeout=10000)
                 p2.wait_for_function('() => window.__SANCTUM__.lan.inRoom && window.__SANCTUM__.lan.playerCount === 2', timeout=10000)
 
-                # Wait for automatic WebRTC P2P DataChannel direct upgrade
-                p1.wait_for_function('() => window.__SANCTUM__.lan.p2pPeerCount >= 1', timeout=12000)
-                p2.wait_for_function('() => window.__SANCTUM__.lan.p2pPeerCount >= 1', timeout=12000)
-                p1.wait_for_timeout(300)
+                # Direct UDP is optional: the public relay must work even when NAT blocks it.
+                p1.wait_for_timeout(3500)
                 p1_pill = p1.text_content('#lan-conn-pill').strip()
                 p2_pill = p2.text_content('#lan-conn-pill').strip()
                 p2_ping = p2.evaluate('() => window.__SANCTUM__.lan.pingMs')
-                print(f'5. WebRTC P2P Direct Channel Active! Host Badge: {p1_pill} | Remote Badge: {p2_pill} | P2P Ping: {p2_ping}ms')
-                assert 'P2P' in p1_pill and 'P2P' in p2_pill
+                print(f'5. Transport: Host={p1_pill} | Remote={p2_pill} | displayed ping={p2_ping}ms')
+                print('Real P2P active:', p1.evaluate('window.__SANCTUM__.lan.p2pPeerCount > 0'))
                 p1.screenshot(path=f'{SHOT_DIR}/wan_02_lobby_2p_p2p_zh.png')
 
                 # Ready up -> Co-op Hero Select -> Enter Floor 1 Dungeon together
@@ -150,7 +150,7 @@ def main():
                 seed2 = p2.evaluate('() => window.__SANCTUM__.dungeon.seed')
                 assert seed1 == seed2, f'Dungeon seed mismatch: {seed1} vs {seed2}'
 
-                # Move Remote Friend and verify real-time position sync over WebRTC P2P
+                # Move Remote Friend and verify delivery over whichever path is available.
                 pos_before = p1.evaluate('() => { const r = [...window.__SANCTUM__.remotePlayers.values()][0]; return r ? [r.x, r.z] : null; }')
                 p2.keyboard.down('KeyD')
                 p2.wait_for_timeout(450)
@@ -159,11 +159,11 @@ def main():
                 pos_after = p1.evaluate('() => { const r = [...window.__SANCTUM__.remotePlayers.values()][0]; return r ? [r.x, r.z] : null; }')
                 assert pos_before is not None and pos_after is not None, 'Remote player avatar missing on Host'
                 moved_dist = ((pos_after[0] - pos_before[0]) ** 2 + (pos_after[1] - pos_before[1]) ** 2) ** 0.5
-                assert moved_dist > 0.4, f'Expected P2P movement sync > 0.4m, got {moved_dist:.3f}m'
-                print(f'6. Co-op Dungeon Seed ({seed1}) & Real-Time P2P Movement Sync ({moved_dist:.2f}m) Verified!')
+                assert moved_dist > 0.4, f'Expected movement sync > 0.4m, got {moved_dist:.3f}m'
+                print(f'6. Co-op Dungeon Seed ({seed1}) & Movement Sync ({moved_dist:.2f}m) Verified!')
 
                 assert len(errors) == 0, f'Unexpected errors: {errors}'
-                print('ALL WAN + P2P E2E CHECKS PASSED WITH ZERO ERRORS!')
+                print('PUBLIC WAN INVITE, ROOM, DUNGEON AND MOVEMENT CHECKS PASSED WITH ZERO ERRORS!')
             finally:
                 b_remote.close()
                 b_host.close()
