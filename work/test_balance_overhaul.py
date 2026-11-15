@@ -10,6 +10,109 @@ ROOT = Path(__file__).resolve().parent.parent
 HTML_PATH = ROOT / 'outputs' / 'sanctum-of-ash.html'
 
 
+def run_melee_reach_checks(page):
+    checks = page.evaluate('''() => {
+      const g = window.__SANCTUM__, A = window.__SANCTUM_ARSENAL__;
+      const baseline = {
+        greatsword: [4.65, 3], twinblades: [3.65, 5], warhammer: [4.35, 2],
+        chainwhip: [6.85, 3], bloodscythe: [5.50, 3], eclipseblade: [5.35, 4], mjolnir: [5.80, 3]
+      };
+      const saved = { hero: g.hero,
+        damageEnemy: g.damageEnemy, updateEnemies: g.updateEnemies, updateProjectiles: g.updateProjectiles,
+        cover: g.dungeon.isSegmentBlockedByCover };
+      const rows = [], instances = [], visuals = [];
+      const vfxMethods = ['spawnSlashArc', 'spawnThrustLance', 'spawnRing'];
+      const savedVfx = Object.fromEntries(vfxMethods.map(key => [key, g.vfx[key]]));
+      g.mode = 'paused';
+      g.clearEntities();
+      const room = g.dungeon.rooms.find(r => r.type === 'boss');
+      g.currentRoom = room;
+      g.resetHeroStats();
+      const h = g.hero;
+      h.finisherWave = false;
+      g.updateEnemies = () => {};
+      g.updateProjectiles = () => {};
+      g.dungeon.isSegmentBlockedByCover = () => false;
+      for (const key of vfxMethods) g.vfx[key] = function(...args) {
+        visuals.push({ key, args });
+        return savedVfx[key].apply(this, args);
+      };
+      try {
+        for (const [id, [oldRange, steps]] of Object.entries(baseline)) {
+          for (let tier = 1; tier <= 4; tier++) {
+            const w = A.rollWeaponInstance(id, tier);
+            instances.push({ id, tier, range: w.range, expected: oldRange * 0.8 });
+          }
+          const w = A.rollWeaponInstance(id, 1);
+          h.weapons = [w]; h.activeSlot = 0;
+          g.mountActiveWeapon();
+          for (const boost of [1, 1.25]) {
+            h.reachMult = boost;
+            for (let step = 0; step < steps; step++) {
+              g.clearEntities();
+              h.x = room.cx; h.z = room.cz; h.yaw = 0;
+              h.vx = h.vz = h.dashTimer = 0; h.atkState = null;
+              h.comboStep = step; h.comboWindow = 1;
+              g.aimWorld.set(h.x, 0, h.z + 10);
+              visuals.length = 0;
+              g.mode = 'explore'; g.tryAttack(); g.mode = 'paused';
+              const attackVisual = visuals[0];
+              const st = h.atkState, spec = st.stepSpec;
+              const oldExtent = (spec.shape === 'crater'
+                ? (id === 'warhammer' ? 5.25 : 5.90)
+                : oldRange * (spec.reachMult || 1)) * boost;
+              const newExtent = oldExtent * 0.8;
+              const radius = 0.5;
+              const distances = { close: 1.25, inside: newExtent - 0.10,
+                edge: newExtent + radius - 0.10, outside: newExtent + radius + 0.15,
+                far: oldExtent + radius + 0.10 };
+              const names = new Map();
+              for (const [name, dist] of Object.entries(distances)) {
+                const e = g.spawnEnemy('thrall', h.x, h.z + dist, room, { affixes: [] });
+                e.radius = radius;
+                names.set(e, name);
+              }
+              const hits = [];
+              g.damageEnemy = (e, dmg, x, z, opts) => {
+                if (names.has(e) && opts?.weaponInst === w) hits.push(names.get(e));
+              };
+              h.vx = h.vz = 0; // Measure weapon reach independently of the unchanged attack lunge.
+              visuals.length = 0; // Exclude spawn rings from the crater impact check.
+              st.timer = st.duration * 0.5 - 0.001;
+              g.updateSimulation(0.001);
+              const visual = spec.shape === 'crater'
+                ? visuals.find(v => v.key === 'spawnRing') : attackVisual;
+              rows.push({ id, step, boost, shape: spec.shape, hits,
+                visualReach: visual?.args[spec.shape === 'crater' ? 2 : 3],
+                expectedVisual: spec.shape === 'crater'
+                  ? (id === 'warhammer' ? 2.20 : 2.36) * boost : newExtent });
+            }
+          }
+        }
+        return { rows, instances,
+          meleeIds: A.WEAPON_LIST.filter(w => w.category === 'melee').map(w => w.id) };
+      } finally {
+        g.damageEnemy = saved.damageEnemy;
+        g.updateEnemies = saved.updateEnemies;
+        g.updateProjectiles = saved.updateProjectiles;
+        g.dungeon.isSegmentBlockedByCover = saved.cover;
+        for (const key of vfxMethods) g.vfx[key] = savedVfx[key];
+        g.clearEntities();
+        g.hero = saved.hero;
+        g.mountActiveWeapon(); g.mode = 'paused';
+      }
+    }''')
+    assert len(checks['meleeIds']) == 7
+    assert set(checks['meleeIds']) == {row['id'] for row in checks['rows']}
+    assert len(checks['rows']) == 46 and len(checks['instances']) == 28
+    for instance in checks['instances']:
+        assert abs(instance['range'] - instance['expected']) < 1e-9, instance
+    for row in checks['rows']:
+        assert set(row['hits']) == {'close', 'inside', 'edge'}, row
+        assert abs(row['visualReach'] - row['expectedVisual']) < 1e-9, row
+    print('[PASS] All 7 melee weapons: 46 combo/reach-buff cases, 230 hit boundaries, 28 tier instances and matching VFX!')
+
+
 def run_enemy_barrage_checks(page):
     checks = page.evaluate('''() => {
       const g = window.__SANCTUM__;
@@ -557,6 +660,7 @@ def run_solo_checks(p):
     }''')
     assert descent_flask_check['floorIndex'] == 1 and descent_flask_check['flasks'] == 3, f'Floor descent should grant +2 flasks: {descent_flask_check}'
 
+    run_melee_reach_checks(page)
     run_enemy_barrage_checks(page)
     assert not errors, f'Browser errors encountered: {errors}'
     browser.close()
