@@ -6,6 +6,11 @@
   </thead>
   <tbody>
     <tr>
+      <td valign="top">2026-11-15<br><sub>18:14</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/16"><strong>调整紫晶掉落</strong></a><br>普通房紫晶平均供给减少约七成，Boss 在 75%、50%、25% 血量集中掉落，小怪越少补给越多。</td>
+    </tr>
+    <tr>
       <td valign="top">2026-11-15<br><sub>18:09</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/18"><strong>首页展示最近更新</strong></a><br>README 顶部新增最近 5 条更新卡片，下面可打开完整列表，原项目介绍保留在下方。</td>
@@ -24,11 +29,6 @@
       <td valign="top">2026-11-15<br><sub>17:11</sub></td>
       <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
       <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12"><strong>增加更新一览</strong></a><br>新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。</td>
-    </tr>
-    <tr>
-      <td valign="top">2026-11-15<br><sub>17:01</sub></td>
-      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
-      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/8"><strong>调整敌弹和敌人移速</strong></a><br>敌弹减速 30% 并增加每次发射数量，近战敌人约慢 7%、远程约快 15%。</td>
     </tr>
   </tbody>
 </table>

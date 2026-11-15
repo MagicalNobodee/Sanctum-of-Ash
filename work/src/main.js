@@ -2179,12 +2179,35 @@ class SanctumGame {
     return true;
   }
 
+  getBossGuardCount() {
+    const sc = this.getActiveScaling ? this.getActiveScaling() : { bossExtraGuards: 0, spawnMult: 1.0 };
+    return Math.min(8, Math.max(4, Math.round((4 + Math.floor(this.floorIndex * 0.7) + (sc.bossExtraGuards || 0)) * Math.max(0.85, sc.spawnMult || 1.0))));
+  }
+
+  dropBossEnergyMilestones(e) {
+    if (this.isCoopClient && this.isCoopClient()) return;
+    if (e.bossEnergyDrop == null) {
+      const sc = this.getActiveScaling ? this.getActiveScaling() : {};
+      const initialGuards = (e.room?.spawns || []).reduce((n, s) => n + (s.type === e.type ? 0 : s.count), 0) + (sc.bossExtraGuards || 0);
+      const waves = this.selectedDifficultyId === 'abyssal' ? 3 : 2;
+      // Budget 240 combat energy before HP scaling; fewer guards leave more for bloodlines.
+      const guardEnergy = (initialGuards + waves * this.getBossGuardCount()) * 5;
+      const hpScale = Math.pow(Math.max(1, sc.mobHpMult || 1), 0.32);
+      e.bossEnergyDrop = Math.round(Math.max(90, 240 - guardEnergy) * hpScale / 3);
+    }
+    const thresholds = [0.75, 0.50, 0.25];
+    let stage = e.bossEnergyStage || 0;
+    while (stage < thresholds.length && e.hp <= e.maxHp * thresholds[stage]) {
+      e.bossEnergyStage = ++stage;
+      this.spawnCinderOrbs(e.x, e.z, e.bossEnergyDrop, { orbKind: 'energy' });
+    }
+  }
+
   spawnBossSummonWave(bossEnemy) {
     if (!bossEnemy || !bossEnemy.room) return;
     if (this.isCoopClient && this.isCoopClient()) return;
     const room = bossEnemy.room;
-    const sc = this.getActiveScaling ? this.getActiveScaling() : { bossExtraGuards: 0, spawnMult: 1.0 };
-    const guardCount = Math.min(8, Math.max(4, Math.round((4 + Math.floor(this.floorIndex * 0.7) + (sc.bossExtraGuards || 0)) * Math.max(0.85, sc.spawnMult || 1.0))));
+    const guardCount = this.getBossGuardCount();
     const guardPool = this.floorCfg.depth >= 3
       ? ['thrall', 'stalker', 'acolyte', 'juggernaut']
       : ['thrall', 'stalker', 'acolyte'];
@@ -2498,7 +2521,7 @@ class SanctumGame {
     const totalInt = Math.max(1, Math.round(totalValue));
     const count = isVitality
       ? 1
-      : (isEnergy ? Math.min(4, Math.max(1, Math.round(totalInt / 6))) : Math.min(7, Math.max(2, Math.round(totalInt / 6))));
+      : (isEnergy ? Math.min(10, Math.max(1, Math.round(totalInt / 6))) : Math.min(7, Math.max(2, Math.round(totalInt / 6))));
     const baseEach = Math.max(1, Math.floor(totalInt / count));
     const rem = Math.max(0, totalInt - baseEach * count);
     for (let i = 0; i < count; i++) {
@@ -2535,7 +2558,7 @@ class SanctumGame {
       : (Math.random() < 0.18 ? Math.max(8, Math.round((this.hero?.maxHp || 160) * 0.07)) : 0);
     const energyDrop = netDrop && Number.isFinite(netDrop.energyDrop)
       ? netDrop.energyDrop
-      : (Math.random() < 0.26 ? 10 : 0);
+      : (Math.random() < 0.12 ? 6 : 0);
     const orbSeed = (netDrop && netDrop.orbSeed) || this.makeOrbDropSeed(prop.x, prop.z, baseDrop);
     if (!fromRemote && this.isCoopActive && this.isCoopActive() && prop.netId) {
       this.lan.relay({
@@ -5244,16 +5267,13 @@ class SanctumGame {
     }
     if (e.boss) {
       document.getElementById('boss-fill').style.width = `${Math.max(0, (e.hp / e.maxHp) * 100)}%`;
+      this.dropBossEnergyMilestones(e);
       if (e.hp > 0 && !(this.isCoopClient && this.isCoopClient())) {
         const hpRatio = e.hp / Math.max(1, e.maxHp);
         if (!e.bossEnraged && hpRatio <= 0.50) {
           e.bossEnraged = true;
           e.speed *= 1.20;
           e.baseCd = +(e.baseCd * 0.78).toFixed(3);
-          this.spawnCinderOrbs(e.x, e.z, 26, {
-            orbKind: 'energy',
-            seed: this.makeOrbDropSeed(e.x, e.z, 26)
-          });
           this.vfx.spawnRing(e.x, e.z, 3.8, 0.55, 0xff2a55, true);
           this.sfx.bossRoar(true, { x: e.x, z: e.z });
         }
@@ -5368,11 +5388,11 @@ class SanctumGame {
         const enHpScale = Math.pow(Math.max(1.0, scDrop.mobHpMult || 1.0), 0.32);
         const isHeavyOrElite = !!(e.isEliteMob || e.type === 'juggernaut');
         const enChance = e.bossSummon
-          ? 0.88
-          : ((isHeavyOrElite ? 0.82 : 0.54) / enDensityDamp);
+          ? 0.50
+          : ((isHeavyOrElite ? 0.38 : 0.24) / enDensityDamp);
         if (Math.random() < enChance) {
-          const baseEn = e.bossSummon ? 15 : (isHeavyOrElite ? 16 : 11);
-          const enVal = Math.max(6, Math.round(baseEn * enHpScale));
+          const baseEn = e.bossSummon ? 10 : (isHeavyOrElite ? 10 : 7);
+          const enVal = Math.max(4, Math.round(baseEn * enHpScale));
           this.spawnCinderOrbs(e.x, e.z, enVal, {
             orbKind: 'energy',
             seed: (orbSeed ^ 0x3b9aca07) >>> 0
