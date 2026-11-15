@@ -22,7 +22,7 @@ const ROOM_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 export async function probePublicTunnel(url, instanceId) {
   const httpOk = await new Promise((resolve) => {
-    const req = https.get(new URL('/api/lan-info', url), { timeout: 4500, headers: { Accept: 'application/json' } }, (res) => {
+    const req = https.get(new URL('/api/lan-info', url), { timeout: 4500, signal: AbortSignal.timeout(4500), headers: { Accept: 'application/json' } }, (res) => {
       let raw = '';
       res.on('data', (chunk) => {
         raw += chunk;
@@ -41,6 +41,40 @@ export async function probePublicTunnel(url, instanceId) {
     req.on('error', () => resolve(false));
   });
   if (!httpOk) return false;
+  const pageOk = await new Promise((resolve) => {
+    const signal = AbortSignal.timeout(6000);
+    const checkPage = (target, cookie = '', redirects = 0) => {
+      const req = https.get(target, { signal, headers: {
+        Accept: 'text/html,application/xhtml+xml', 'Accept-Encoding': 'br, gzip',
+        'User-Agent': 'Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36', Cookie: cookie
+      } }, (res) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects < 3) {
+          const next = new URL(res.headers.location, target);
+          res.resume();
+          if (next.origin !== new URL(url).origin) { resolve(false); return; }
+          const cookies = (res.headers['set-cookie'] || []).map((value) => value.split(';')[0]).join('; ');
+          checkPage(next, cookies || cookie, redirects + 1);
+          return;
+        }
+        if (res.statusCode !== 200 || res.headers['x-sanctum-instance'] !== instanceId) {
+          res.destroy();
+          resolve(false);
+          return;
+        }
+        let bytes = 0;
+        res.on('data', (chunk) => {
+          bytes += chunk.length;
+          if (bytes > 2_000_000) { req.destroy(); resolve(false); }
+        });
+        res.on('end', () => resolve(bytes > 0));
+        res.on('aborted', () => resolve(false));
+        res.on('error', () => resolve(false));
+      });
+      req.on('error', () => resolve(false));
+    };
+    checkPage(new URL('/?serveo-skip-browser-warning=true', url));
+  });
+  if (!pageOk) return false;
   return new Promise((resolve) => {
     const key = crypto.randomBytes(16).toString('base64');
     let socket = null;
@@ -1026,6 +1060,7 @@ export function createLanServer({ port = DEFAULT_PORT, host = '0.0.0.0', enableW
       let bodyBuf = asset.raw;
       const headers = {
         'Content-Type': 'text/html; charset=utf-8',
+        'X-Sanctum-Instance': instanceId,
         'Cache-Control': 'no-store',
         'Vary': 'Accept-Encoding'
       };

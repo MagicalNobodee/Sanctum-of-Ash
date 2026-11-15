@@ -12,7 +12,9 @@
 
 macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启动器会尝试启动联机服务；找不到 Node.js 时会打开离线游戏。首次运行下载的启动器时，可能需要在系统设置中允许打开。
 
-公网邀请使用外部 SSH 隧道服务，需要联网且取决于服务可用性。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
+异地好友使用大厅里的“异地好友网址”。房主会依次尝试免费的 Cloudflare、Serveo、localhost.run 通道，确认网页和联机连接确实能返回本机后才显示可用；Cloudflare 需要本机已安装 `cloudflared`，缺失时自动尝试后续通道。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
+
+直连可用时自动加速，无法直连时使用网页通道转发动作。短暂断网会尝试恢复原房间，服务端保留原名额 45 秒；主动退出不重连。免费通道可能慢、失效或换网址，无法保证大陆与香港的所有网络均低延迟；若通道网址已变且直连也已断开，好友需要房主的新邀请链接。更新后房主和好友都重新打开游戏，才能完整使用新的恢复功能。
 
 ## 多人开发与 Agent 协作
 
@@ -59,6 +61,11 @@ python3 -m playwright install chromium
 python3 work/test_balance_overhaul.py
 python3 work/test_coop_sync_rules.py
 python3 work/test_lan_multiplayer.py
+python3 work/test_network_recovery.py
+# 要求真实直连也通过时使用：
+python3 work/test_network_recovery.py --require-p2p
+# 需要外网，验证免费邀请网址及实际动作转发：
+python3 work/test_wan_multiplayer.py
 ```
 
 部分早期测试针对旧版界面和数值，保留作开发记录，可能需要随游戏规则更新。现有浏览器测试使用 macOS 图形参数；其他系统可能需要调整浏览器启动参数。仓库不会自动安装开机后台服务。

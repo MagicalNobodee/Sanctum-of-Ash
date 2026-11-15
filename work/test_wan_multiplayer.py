@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import time
 import urllib.request
+from test_lan_multiplayer import check_system_headroom
 from playwright.sync_api import sync_playwright
 
 PORT = 18796
@@ -26,6 +27,7 @@ def wait_for_server(url, timeout=8.0):
 
 
 def main():
+    check_system_headroom(2)
     proc = subprocess.Popen(
         [NODE_BIN, SERVER_PATH, '--port', str(PORT), '--wan'],
         stdout=subprocess.DEVNULL,
@@ -147,7 +149,7 @@ def main():
                 seed2 = p2.evaluate('() => window.__SANCTUM__.dungeon.seed')
                 assert seed1 == seed2, f'Dungeon seed mismatch: {seed1} vs {seed2}'
 
-                # Move Remote Friend and verify real-time position sync over WebRTC P2P
+                # Move Remote Friend and verify delivery over whichever path is available.
                 pos_before = p1.evaluate('() => { const r = [...window.__SANCTUM__.remotePlayers.values()][0]; return r ? [r.x, r.z] : null; }')
                 p2.keyboard.down('KeyD')
                 p2.wait_for_timeout(450)
@@ -156,7 +158,7 @@ def main():
                 pos_after = p1.evaluate('() => { const r = [...window.__SANCTUM__.remotePlayers.values()][0]; return r ? [r.x, r.z] : null; }')
                 assert pos_before is not None and pos_after is not None, 'Remote player avatar missing on Host'
                 moved_dist = ((pos_after[0] - pos_before[0]) ** 2 + (pos_after[1] - pos_before[1]) ** 2) ** 0.5
-                assert moved_dist > 0.4, f'Expected P2P movement sync > 0.4m, got {moved_dist:.3f}m'
+                assert moved_dist > 0.4, f'Expected movement sync > 0.4m, got {moved_dist:.3f}m'
                 print(f'6. Co-op Dungeon Seed ({seed1}) & Movement Sync ({moved_dist:.2f}m) Verified!')
 
                 assert len(errors) == 0, f'Unexpected errors: {errors}'

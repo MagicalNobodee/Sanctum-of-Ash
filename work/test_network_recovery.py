@@ -163,6 +163,18 @@ def main():
                 for page in pages:
                     page.wait_for_function('window.__SANCTUM__.lan.connected && !window.__SANCTUM__.lan.reconnectingWs')
                 move_and_check(guest, host, -0.8)
+                guest.evaluate('window.__SANCTUM__.mode = "lobby"; window.__SANCTUM__.lan.ws.close()')
+                guest.wait_for_function('window.__SANCTUM__.lan.reconnectingWs')
+                next_seed = host.evaluate("""() => {
+                  const g = window.__SANCTUM__;
+                  const init = g.createFloorInitPayload(0, true);
+                  init.classMap = Object.fromEntries(g.lan.players.map(p => [p.id, p.classId]));
+                  g.lan.launchRun(init);
+                  return init.seed;
+                }""")
+                guest.wait_for_function('seed => window.__SANCTUM__.mode === "explore" && window.__SANCTUM__.dungeon.seed === seed',
+                                        arg=next_seed, timeout=10000)
+                print('[PASS] A new run launched during disconnection is restored automatically')
                 for index, page in enumerate(pages):
                     assert page.evaluate('window.__SANCTUM__.lan.clientId') == ids[index]
                     page.screenshot(path=f'{shots}/player-{index}.png')

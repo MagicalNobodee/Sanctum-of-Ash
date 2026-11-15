@@ -323,12 +323,28 @@ test('tunnel health checks reject warning pages, other servers and aborted respo
   let body = '';
   let aborted = false;
   let blockedWs = false;
+  let blockedPage = false;
+  let pageRedirect = false;
   t.mock.method(https, 'get', (url, opts, callback) => {
     const req = new EventEmitter();
     req.destroy = () => {};
     queueMicrotask(() => {
       const res = new EventEmitter();
       res.statusCode = 200;
+      if (url.pathname === '/') {
+        res.headers = { 'x-sanctum-instance': blockedPage ? 'warning' : 'mine' };
+        res.destroy = res.resume = () => {};
+        if (pageRedirect && !opts.headers.Cookie) {
+          res.statusCode = 302;
+          res.headers = { location: '/', 'set-cookie': ['accepted=true; Path=/'] };
+          callback(res);
+          return;
+        }
+        callback(res);
+        res.emit('data', Buffer.from('game html'));
+        res.emit('end');
+        return;
+      }
       if (url.pathname === '/ws') {
         if (blockedWs) { res.resume = () => {}; req.emit('response', res); return; }
         const socket = new EventEmitter();
@@ -351,6 +367,11 @@ test('tunnel health checks reject warning pages, other servers and aborted respo
   assert.equal(await probePublicTunnel('https://example.org', 'mine'), false);
   body = JSON.stringify({ app: 'sanctum-of-ash-lan', instanceId: 'mine' });
   assert.equal(await probePublicTunnel('https://example.org', 'mine'), true);
+  pageRedirect = true;
+  assert.equal(await probePublicTunnel('https://example.org', 'mine'), true, 'browser redirect cookies must be preserved');
+  blockedPage = true;
+  assert.equal(await probePublicTunnel('https://example.org', 'mine'), false, 'an accessible API with a browser warning page is unusable');
+  blockedPage = false;
   blockedWs = true;
   assert.equal(await probePublicTunnel('https://example.org', 'mine'), false, 'a working page with blocked gameplay WS is unusable');
   aborted = true;

@@ -114,7 +114,13 @@ export function initCoopSystem(game) {
     },
     onRoomResumed: (msg) => {
       game._lanErrorText = '';
-      if (msg.inGame && msg.lastFloorInit) handleCoopRelay(game, msg.hostId, msg.lastFloorInit);
+      if (game.isCoopHost?.() && game.lastAuthoritativeFloorInit) {
+        game.lan.relay(game.lastAuthoritativeFloorInit, 'others');
+      }
+      // A live P2P run may already be ahead of the server's cached floor.
+      if (msg.inGame && msg.lastFloorInit && (game.mode === 'title' || game.mode === 'lobby')) {
+        game.lan.cb.onRunLaunched({ ...msg, floorInit: msg.lastFloorInit });
+      }
     },
     onPlayerJoined: (player, playerCount) => {
       game.sfx?.coopPlayerJoin?.();
