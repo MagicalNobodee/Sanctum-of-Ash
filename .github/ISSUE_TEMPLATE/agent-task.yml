@@ -10,10 +10,17 @@ body:
     validations:
       required: true
   - type: textarea
+    id: preflight
+    attributes:
+      label: 开工前核对与查重
+      description: 最新主线 SHA；对象+属性/行为+预期效果；相关进行中/已完成任务与 PR；当前实现；是否重复或重叠。相同目标已满足时告知无需开发；同一属性目标不同时记录已有改动摘要与用户确认，不同独立属性无需确认。
+    validations:
+      required: true
+  - type: textarea
     id: scope
     attributes:
       label: 修改范围与不做的内容
-      description: 预计涉及的文件/函数、公共接口影响、依赖或可能重叠的 Issue/PR。
+      description: 具体属性/效果、预计涉及的文件/函数、公共接口影响、依赖或可能重叠的 Issue/PR。不能仅按整个文件判断是否冲突。
     validations:
       required: true
   - type: textarea
