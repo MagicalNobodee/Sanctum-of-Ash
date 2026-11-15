@@ -329,12 +329,12 @@ def main():
 
             p1.screenshot(path=f'{SHOT_DIR}/mp_01_lobby_4p_zh.png')
             # Test bilingual toggle inside 4P Lobby
-            p1.click('#btn-lang')
+            p1.keyboard.press('KeyL')
             p1.wait_for_timeout(140)
             assert 'LAN LOBBY' in p1.text_content('#lan-header')
             assert '4P Co-op · 3.20x Difficulty' in p1.text_content('#lan-scale-banner')
             p1.screenshot(path=f'{SHOT_DIR}/mp_02_lobby_4p_en.png')
-            p1.click('#btn-lang')
+            p1.keyboard.press('KeyL')
             p1.wait_for_timeout(140)
 
             # 3. Launch 4-Player Expedition & verify deterministic seed/biome/props sync
