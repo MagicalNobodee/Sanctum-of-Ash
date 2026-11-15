@@ -1,6 +1,41 @@
-# Sanctum of Ash
+<!-- RECENT_UPDATES_START -->
+<table width="100%">
+  <thead>
+    <tr><th colspan="3" align="left">🗓 最近更新 <sub>最近 5 项 · 新的在前</sub></th></tr>
+    <tr><th align="left">时间（UTC+8）</th><th align="left">开发者</th><th align="left">任务与结果</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td valign="top">2026-11-15<br><sub>18:09</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/18"><strong>首页展示最近更新</strong></a><br>README 顶部新增最近 5 条更新卡片，下面可打开完整列表，原项目介绍保留在下方。</td>
+    </tr>
+    <tr>
+      <td valign="top">2026-11-15<br><sub>17:44</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/14"><strong>缩短近战攻击距离</strong></a><br>全部 7 把近战武器及砸地连招的攻击距离缩短 20%，保留武器长短差异，更新双语说明并通过战斗测试。</td>
+    </tr>
+    <tr>
+      <td valign="top">2026-11-15<br><sub>17:13</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11"><strong>整理游戏顶部界面</strong></a><br>右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。</td>
+    </tr>
+    <tr>
+      <td valign="top">2026-11-15<br><sub>17:11</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12"><strong>增加更新一览</strong></a><br>新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。</td>
+    </tr>
+    <tr>
+      <td valign="top">2026-11-15<br><sub>17:01</sub></td>
+      <td valign="top"><sub>MagicalNobodee<br>Codex</sub></td>
+      <td><a href="https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/8"><strong>调整敌弹和敌人移速</strong></a><br>敌弹减速 30% 并增加每次发射数量，近战敌人约慢 7%、远程约快 15%。</td>
+    </tr>
+  </tbody>
+</table>
+<p align="right"><a href="UPDATES.md"><strong>查看完整更新列表 →</strong></a></p>
+<!-- RECENT_UPDATES_END -->
 
-**[📋 更新一览：谁在什么时候完成了什么](UPDATES.md)**
+# Sanctum of Ash
 
 暗黑写实风 3D 肉鸽地牢动作游戏（支持 **1–4 人局域网联机合作** 与单人离线直玩 · 12 大可选英雄职业 × 4 层递进深度 × 8 套模块化主题地牢 × 20 把五阶稀有度双持武器库（含 5 把首领神话武器与图鉴） · 中英双语实时切换）。
 
@@ -18,7 +53,7 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 
 每位开发者只需向自己的 Agent 提修改需求，默认就授权它完成实现、测试和合入，无需另外说“允许合入”。Agent 先读 [AGENTS.md](AGENTS.md)，自行完成 [协作流程](CONTRIBUTING.md) 中的最新代码检查、认领、独立分支、自查和 PR 交付；只有实际目标冲突才需要用户确认。
 
-每次会话任务完成，Agent 都要在 [更新一览](UPDATES.md) 顶部补一条易读摘要，并新增一份 [详细改动记录](docs/changes/)；长期共识放在 [决策记录](docs/decisions/)。新建 Issue 和 PR 时会提供统一模板；开始先获取最新代码，结束核实远端交付状态。
+每次会话任务完成，Agent 都要在 [更新一览](UPDATES.md) 补一条易读摘要、同步本页顶部最近 5 条，并新增一份 [详细改动记录](docs/changes/)；长期共识放在 [决策记录](docs/decisions/)。新建 Issue 和 PR 时会提供统一模板；开始先获取最新代码，结束核实远端交付状态。
 
 ## 目录结构
 
