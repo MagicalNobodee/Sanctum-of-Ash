@@ -2190,7 +2190,7 @@ class SanctumGame {
       const sc = this.getActiveScaling ? this.getActiveScaling() : {};
       const initialGuards = (e.room?.spawns || []).reduce((n, s) => n + (s.type === e.type ? 0 : s.count), 0) + (sc.bossExtraGuards || 0);
       const waves = this.selectedDifficultyId === 'abyssal' ? 3 : 2;
-      // Budget around 240 energy per fight: fewer guards leave more for the boss itself.
+      // Budget 240 combat energy before HP scaling; fewer guards leave more for bloodlines.
       const guardEnergy = (initialGuards + waves * this.getBossGuardCount()) * 5;
       const hpScale = Math.pow(Math.max(1, sc.mobHpMult || 1), 0.32);
       e.bossEnergyDrop = Math.round(Math.max(90, 240 - guardEnergy) * hpScale / 3);
