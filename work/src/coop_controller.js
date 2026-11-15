@@ -93,6 +93,8 @@ export function initCoopSystem(game) {
       const ui = tUI();
       if (reason === 'not_found') game._lanErrorText = ui.lanErrNotFound(code);
       else if (reason === 'full') game._lanErrorText = ui.lanErrFull(code);
+      else if (reason === 'resume_failed') game._lanErrorText = ui.lanErrResume;
+      else if (reason === 'delivery_timeout') game._lanErrorText = ui.lanErrDelivery;
       else game._lanErrorText = ui.lanErrConnect;
       renderLanLobbyUI(game);
     },
@@ -109,6 +111,10 @@ export function initCoopSystem(game) {
         game.sfx?.setPausedDamp?.(false);
         game.startCoopRunFromInit(msg.lastFloorInit, true);
       }
+    },
+    onRoomResumed: (msg) => {
+      game._lanErrorText = '';
+      if (msg.inGame && msg.lastFloorInit) handleCoopRelay(game, msg.hostId, msg.lastFloorInit);
     },
     onPlayerJoined: (player, playerCount) => {
       game.sfx?.coopPlayerJoin?.();
@@ -778,7 +784,10 @@ export function renderLanLobbyUI(game) {
 
   const connPill = document.getElementById('lan-conn-pill');
   if (connPill) {
-    if (lan.connected) {
+    if (lan.reconnectingWs) {
+      connPill.textContent = lan.p2pPeerCount > 0 ? ui.lanStatusReconnectingDirect : ui.lanStatusReconnecting;
+      connPill.classList.toggle('online', lan.p2pPeerCount > 0);
+    } else if (lan.connected) {
       if (lan.transportMode === 'embedded') {
         connPill.textContent = ui.lanStatusEmbedded || ui.lanStatusConnected(lan.pingMs);
       } else if (lan.p2pPeerCount > 0 && ui.lanStatusP2PActive) {
@@ -1548,6 +1557,8 @@ function handleCoopRelay(game, fromId, payload) {
   if (!payload || typeof payload.kind !== 'string') return;
 
   if (payload.kind === 'floor_init') {
+    if ((game.dungeon?.seed === payload.seed && game.floorIndex === payload.floorIndex) ||
+      (game.mode === 'transition' && game.lastAuthoritativeFloorInit?.seed === payload.seed)) return;
     if (payload.floorIndex === 0 && payload.isNewRun) {
       game.startCoopRunFromInit(payload, false);
     } else {
