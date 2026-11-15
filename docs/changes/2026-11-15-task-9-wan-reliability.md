@@ -20,7 +20,7 @@
 - `npm ci --prefix work`、`npm run build --prefix work`、`npm run build:biomes --prefix work` 通过；重新生成两个游戏 HTML，主题产物无变化。
 - `node --test work/test_multiplayer_watchdog.mjs`：17 项通过，覆盖双向 WS 转发、单人/双方断线、同身份恢复、离线错过开局、错误凭据/过期、主动退出、假直连、拥塞、重复与过期消息、旧版兼容、协商批次和免费通道轮换/健康验证。
 - `python3 work/test_network_recovery.py`：最终实测通过，无 WebRTC 时双向移动/攻击、保留原身份和楼层、真实直连升级、故意制造直连黑洞后转发、自动重建直连、双方同时断线恢复；无页面错误。早期代理网络的真实直连试验未建立，已如实输出未验证；后续可用网络的最终试验真实直连及黑洞恢复均通过。
-- `python3 work/test_wan_multiplayer.py`：有一轮真实免费 HTTPS 邀请→WSS 入房→双人选角→同种子地牢→动作转发通过，未把测试机访问公网入口称为大陆/香港两地实测。早期 Cloudflare 独立探测超时，自动切到可用免费入口；无直连的一轮显示约 842ms。后续复验遇到 localhost.run 网页加载超时；已收紧为还需按浏览器请求头完整下载压缩游戏页、保留跳转 Cookie 并验证实例响应头后才发布网址，一次收紧后的复验未在 80 秒内取得可用网址，不能称为公网稳定性验收通过。
+- `python3 work/test_wan_multiplayer.py`：有一轮真实免费 HTTPS 邀请→WSS 入房→双人选角→同种子地牢→动作转发通过，未把测试机访问公网入口称为大陆/香港两地实测。早期 Cloudflare 独立探测超时，自动切到可用免费入口；无直连的一轮显示约 842ms。后续复验遇到 localhost.run 网页加载超时；已收紧为还需按浏览器请求头完整下载压缩游戏页、保留跳转 Cookie 并验证实例响应头后才发布网址。收紧后独立入口探测曾通过，但浏览器流程两次未在 80/130 秒内取得可用网址，不能称为公网稳定性验收通过。
 - `python3 work/test_coop_sync_rules.py`：地图、集合、宝箱、武器、个人设施、独立地面球及第二层同步全部通过，无页面错误。自查发现并修正楼层去重错误地使用“刚生成、尚未加载”的资料，复验通过。
 - `python3 work/test_lan_multiplayer.py`：两个真实浏览器加两个轻量连接，四人战斗与救援、主动退出人数更新、四层地图/传送门/最终胜利全部通过，页面及控制台错误为 0。
 - `python3 -m unittest discover -s scripts -p 'test_*.py'`：12 项通过；服务/客户端语法、Python 测试语法、差异空白与生成文件检查通过。实现者作者自查，未冒充独立审阅。
