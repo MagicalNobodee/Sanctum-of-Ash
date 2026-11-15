@@ -6,6 +6,7 @@
 
 | 时间（UTC+8） | 开发者 | 任务 | 一句话说明 |
 | --- | --- | --- | --- |
+| 2026-11-15 18:16 | MagicalNobodee · Codex | [修复异地联机恢复](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/9) | 补齐无法直连时的动作转发、失联检测和原房间恢复，增加免费通道验证与切换；免费公网可用性和延迟仍受网络影响。 |
 | 2026-11-15 17:44 | MagicalNobodee · Codex | [缩短近战攻击距离](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/14) | 全部 7 把近战武器及砸地连招的攻击距离缩短 20%，保留武器长短差异，更新双语说明并通过战斗测试。 |
 | 2026-11-15 17:13 | MagicalNobodee · Codex | [整理游戏顶部界面](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11) | 右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。 |
 | 2026-11-15 17:11 | MagicalNobodee · Codex | [增加更新一览](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12) | 新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。 |

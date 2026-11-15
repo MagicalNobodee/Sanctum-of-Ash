@@ -88,7 +88,7 @@ def main():
                 # Wait for automatic public HTTPS WAN URL generation
                 p1.wait_for_function(
                     '() => { const el = document.getElementById("wan-share-url-val"); return el && el.textContent.startsWith("https://"); }',
-                    timeout=80000
+                    timeout=130000
                 )
                 wan_invite_url = p1.text_content('#wan-share-url-val').strip()
                 assert wan_invite_url.startswith('https://') and room_code in wan_invite_url, (

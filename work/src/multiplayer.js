@@ -972,7 +972,7 @@ export class LanClient {
       const timeout = setTimeout(() => {
         if (!settled) {
           settled = true;
-          if (this.ws === ws) this.ws = null;
+          if (this.ws === ws) { this.ws = null; this.connected = false; }
           try { ws.close(); } catch (_) {}
           reject(new Error('timeout'));
         }
@@ -1065,7 +1065,7 @@ export class LanClient {
         if (!settled) {
           clearTimeout(timeout);
           settled = true;
-          if (this.ws === ws) this.ws = null;
+          if (this.ws === ws) { this.ws = null; this.connected = false; }
           try { ws.close(); } catch (_) {}
           reject(new Error('ws_error'));
         }
