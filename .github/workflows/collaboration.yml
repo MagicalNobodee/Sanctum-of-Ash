@@ -67,7 +67,7 @@ jobs:
           npm run build:biomes --prefix work
           git diff --exit-code -- SanctumOfAsh_3DRoguelike.html outputs/sanctum-of-ash.html outputs/biome-showcase.html
       - name: Test native runtime and multiplayer
-        run: node --test work/test_platform_runtime.mjs work/test_multiplayer_watchdog.mjs
+        run: node --experimental-websocket --test work/test_platform_runtime.mjs work/test_multiplayer_watchdog.mjs
       - name: Install browser tests
         run: |
           python -m pip install -r work/requirements.txt
