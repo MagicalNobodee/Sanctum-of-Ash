@@ -6,6 +6,7 @@
 
 | 时间（UTC+8） | 开发者 | 任务 | 一句话说明 |
 | --- | --- | --- | --- |
+| 2026-11-15 17:13 | MagicalNobodee · Codex | [整理游戏顶部界面](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/11) | 右上角操作统一放入 Esc 设置，状态条移至右上，并为层数和余烬补充文字说明。 |
 | 2026-11-15 17:11 | MagicalNobodee · Codex | [增加更新一览](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/12) | 新增按时间倒序的更新列表，并要求 Agent 每次完成任务时补一条易读说明。 |
 | 2026-11-15 17:01 | MagicalNobodee · Codex | [调整敌弹和敌人移速](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/8) | 敌弹减速 30% 并增加每次发射数量，近战敌人约慢 7%、远程约快 15%。 |
 | 2026-11-15 16:51 | MagicalNobodee · Codex | [简化任务交付](https://github.com/MagicalNobodee/Sanctum-of-Ash/issues/6) | 提出修改需求后，Agent 负责验证并合入正式版本，常规任务无需再问一次是否允许合入。 |
