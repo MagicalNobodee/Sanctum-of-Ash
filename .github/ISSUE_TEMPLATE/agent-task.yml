@@ -1,0 +1,35 @@
+name: Agent 协作任务
+description: 给开发者和 Agent 明确目标、范围、验收及交接入口
+title: "[任务] "
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标与验收条件
+      description: 描述可观察的结果，以及怎样判断完成。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 修改范围与不做的内容
+      description: 预计涉及的文件/函数、公共接口影响、依赖或可能重叠的 Issue/PR。
+    validations:
+      required: true
+  - type: textarea
+    id: owner
+    attributes:
+      label: 负责人和认领
+      description: 人类负责人、Agent 会话标识、分支、基线 SHA；认领后按 CONTRIBUTING.md 更新 CLAIM。
+  - type: textarea
+    id: verification
+    attributes:
+      label: 验证计划
+      description: 需要运行什么，是否涉及浏览器、端口或共享服务。
+    validations:
+      required: true
+  - type: textarea
+    id: handoff
+    attributes:
+      label: 当前进展与交接
+      description: 关联 PR、已完成、未完成、阻碍和下一步。后续状态变化可用协议留言补充。

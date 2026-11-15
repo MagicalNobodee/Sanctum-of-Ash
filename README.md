@@ -12,6 +12,12 @@ macOS 用户也可以双击 `outputs/余烬圣所 · Sanctum of Ash.app`。启�
 
 公网邀请使用外部 SSH 隧道服务，需要联网且取决于服务可用性。仅局域网游玩可运行 `node lan-server.mjs --no-wan --open`。
 
+## 多人开发与 Agent 协作
+
+让每位开发者的 Agent 开始任务前先读 [AGENTS.md](AGENTS.md)，具体流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。任务通过 GitHub Issue 认领与交接，每个任务使用独立分支，通过 PR 审阅和自动检查后合入。
+
+每次交付新增一份 [改动记录](docs/changes/)，长期共识放在 [决策记录](docs/decisions/)。新建 Issue 和 PR 时会提供统一模板；开始先获取最新代码，结束核实远端交付状态。
+
 ## 目录结构
 
 - `outputs/余烬圣所 · Sanctum of Ash.app`：双击即玩启动器（自动检测并确保局域网联机服务后台运行后打开游戏）
