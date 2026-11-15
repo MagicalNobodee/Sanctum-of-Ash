@@ -92,7 +92,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 1.12,
     energyCost: 0,
-    range: 4.65,
+    range: 3.72,
     critChance: 0.06,
     critMult: 0.10,
     shieldMult: 1.20,
@@ -102,7 +102,7 @@ export const WEAPON_DEFS = {
     moveSlow: 0.78,
     skillCd: 3.6,
     skillName: 'SEARING ARC',
-    summary: '4.6m broad 3-hit pyre cleave (360° spin + ember wave finisher) · RMB: Piercing Flame Crescent',
+    summary: '3.7m broad 3-hit pyre cleave (360° spin + ember wave finisher) · RMB: Piercing Flame Crescent',
     comboHits: 3
   },
   crossbow: {
@@ -147,7 +147,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 2.35,
     energyCost: 0,
-    range: 3.65,
+    range: 2.92,
     critChance: 0.20,
     critMult: 0.30,
     shieldMult: 1.00,
@@ -158,7 +158,7 @@ export const WEAPON_DEFS = {
     chillDuration: 2.5,
     skillCd: 3.8,
     skillName: 'GLACIAL FLURRY',
-    summary: 'Blistering 5-step dual dance (X-cross double-slash + 4.5m frost thrust + twin lotus spin) · RMB: Invulnerable Frost Lunge',
+    summary: 'Blistering 5-step dual dance (X-cross double-slash + 3.6m frost thrust + twin lotus spin) · RMB: Invulnerable Frost Lunge',
     comboHits: 5
   },
 
@@ -233,7 +233,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 0.68,
     energyCost: 0,
-    range: 4.35,
+    range: 3.48,
     critChance: 0.10,
     critMult: 0.35,
     shieldMult: 2.60,
@@ -244,7 +244,7 @@ export const WEAPON_DEFS = {
     staggerBonus: true,
     skillCd: 4.6,
     skillName: 'THUNDER SLAM',
-    summary: 'Heavy 2-step maul: wide battering sweep into a 5.2m overhead thunder-crater slam · RMB: 3x Cascading Lightning Eruptions',
+    summary: 'Heavy 2-step maul: wide battering sweep into a 4.2m overhead thunder-crater slam · RMB: 3x Cascading Lightning Eruptions',
     comboHits: 2
   },
   scattergun: {
@@ -319,7 +319,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 1.42,
     energyCost: 0,
-    range: 6.85,
+    range: 5.48,
     critChance: 0.16,
     critMult: 0.45,
     shieldMult: 1.35,
@@ -329,7 +329,7 @@ export const WEAPON_DEFS = {
     moveSlow: 0.86,
     skillCd: 4.2,
     skillName: 'SOULSHACKLE HOOK',
-    summary: '6.8m long-reach whip: twin linear cracks + 210° chain sweep · Outer-tip hits ALWAYS CRIT & sonic-burst · RMB: Harpoon Pull',
+    summary: '5.5m long-reach whip: twin linear cracks + 210° chain sweep · Outer-tip hits ALWAYS CRIT & sonic-burst · RMB: Harpoon Pull',
     comboHits: 3
   },
   prismbeam: {
@@ -432,7 +432,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 0.96,
     energyCost: 0,
-    range: 5.50,
+    range: 4.40,
     critChance: 0.18,
     critMult: 0.40,
     shieldMult: 1.45,
@@ -443,7 +443,7 @@ export const WEAPON_DEFS = {
     vampOnHit: 2,
     skillCd: 4.8,
     skillName: 'REAPER CYCLONE',
-    summary: '5.5m 240° inward-pulling reaper crescents + 6.0m full-moon harvest · Lifesteals & EXECUTES low-HP foes · RMB: Draining Whirlwind',
+    summary: '4.4m 240° inward-pulling reaper crescents + 4.8m full-moon harvest · Lifesteals & EXECUTES low-HP foes · RMB: Draining Whirlwind',
     comboHits: 3
   },
   autoturret: {
@@ -517,7 +517,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 1.68,
     energyCost: 0,
-    range: 5.35,
+    range: 4.28,
     critChance: 0.24,
     critMult: 0.55,
     shieldMult: 1.75,
@@ -527,7 +527,7 @@ export const WEAPON_DEFS = {
     moveSlow: 0.90,
     skillCd: 4.5,
     skillName: 'JUDGMENT OMNISLASH',
-    summary: '[BOSS MYTHIC] 5.3m swift iaido cuts + 6.8m rift thrust + wide draw-slash · Tears delayed Cross-Rifts · RMB: Blink Omnislash',
+    summary: '[BOSS MYTHIC] 4.3m swift iaido cuts + 5.5m rift thrust + wide draw-slash · Tears delayed Cross-Rifts · RMB: Blink Omnislash',
     comboHits: 4
   },
   starfallbow: {
@@ -600,7 +600,7 @@ export const WEAPON_DEFS = {
     pellets: 1,
     atkRate: 1.02,
     energyCost: 0,
-    range: 5.80,
+    range: 4.64,
     critChance: 0.18,
     critMult: 0.45,
     shieldMult: 2.80,
@@ -611,7 +611,7 @@ export const WEAPON_DEFS = {
     staggerBonus: true,
     skillCd: 4.6,
     skillName: 'THUNDERGOD RECALL',
-    summary: '[BOSS MYTHIC] 3-form polearm arts: 6.6m lightning thrust, 5.8m wide halberd sweep & 5.9m sky-bolt crater slam · RMB: Thrown Recall',
+    summary: '[BOSS MYTHIC] 3-form polearm arts: 5.3m lightning thrust, 4.6m wide halberd sweep & 4.7m sky-bolt crater slam · RMB: Thrown Recall',
     comboHits: 3
   },
   sunforgecannon: {
@@ -676,7 +676,7 @@ export const MELEE_COMBO_PROFILES = {
     moveSlow: 0.62,
     steps: [
       { shape: 'sector', arcHalf: 1.20, reachMult: 1.00, dur: 0.36, dmgMult: 1.05, lunge: 2.6, kbScale: 1.35, anim: 'heavySweep' },
-      { shape: 'crater', impactOffset: 2.50, craterRadius: 2.75, reachMult: 1.20, dur: 0.46, dmgMult: 1.62, lunge: 3.6, kbScale: 1.45, anim: 'overheadSlam', isFinisher: true }
+      { shape: 'crater', impactOffset: 2.00, craterRadius: 2.20, reachMult: 1.20, dur: 0.46, dmgMult: 1.62, lunge: 3.6, kbScale: 1.45, anim: 'overheadSlam', isFinisher: true }
     ]
   },
   chainwhip: {
@@ -713,7 +713,7 @@ export const MELEE_COMBO_PROFILES = {
     steps: [
       { shape: 'line', halfWidth: 0.85, reachMult: 1.14, dur: 0.30, dmgMult: 1.05, lunge: 4.4, anim: 'thrust' },
       { shape: 'sector', arcHalf: 1.76, reachMult: 1.00, dur: 0.34, dmgMult: 1.20, lunge: 3.4, kbScale: 1.25, anim: 'cleaveL' },
-      { shape: 'crater', impactOffset: 2.95, craterRadius: 2.95, reachMult: 1.02, dur: 0.45, dmgMult: 1.62, lunge: 4.2, kbScale: 1.40, anim: 'overheadSlam', isFinisher: true }
+      { shape: 'crater', impactOffset: 2.36, craterRadius: 2.36, reachMult: 1.02, dur: 0.45, dmgMult: 1.62, lunge: 4.2, kbScale: 1.40, anim: 'overheadSlam', isFinisher: true }
     ]
   }
 };
