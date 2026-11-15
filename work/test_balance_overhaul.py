@@ -1,4 +1,5 @@
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -7,6 +8,83 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 HTML_PATH = ROOT / 'outputs' / 'sanctum-of-ash.html'
+
+
+def run_enemy_barrage_checks(page):
+    checks = page.evaluate('''() => {
+      const g = window.__SANCTUM__;
+      const saved = { index: g.floorIndex, cfg: g.floorCfg, difficulty: g.selectedDifficultyId };
+      g.mode = 'paused';
+      g.clearEntities();
+      const room = g.dungeon.rooms.find(r => r.type === 'boss');
+      g.currentRoom = room;
+      g.hero.x = room.cx;
+      g.hero.z = room.cz;
+      g.spawnEnemyProjectile(room.cx, room.cz + 3, 0, 20);
+      const defaultSpeed = g.projectiles.at(-1).speed;
+      const rows = [];
+      for (let floor = 0; floor < 4; floor++) {
+        g.floorIndex = floor;
+        g.floorCfg = g.floorConfigs[floor];
+        for (const difficulty of ['pilgrim', 'standard', 'bloodfire', 'abyssal']) {
+          g.setDifficulty(difficulty, false);
+          const scaling = g.getActiveScaling();
+          g.clearEntities();
+          const speeds = {};
+          for (const type of ['thrall', 'stalker', 'acolyte', 'juggernaut', 'warden']) {
+            const e = g.spawnEnemy(type, room.cx + 6, room.cz, room, { affixes: [] });
+            speeds[type] = e.speed / (g.floorCfg.speedMult * scaling.enemySpeedMult);
+          }
+          for (const attack of ['acolyte', 'fan', 'nova']) {
+            for (const enraged of (attack === 'acolyte' ? [false] : [false, true])) {
+              g.clearEntities();
+              const e = g.spawnEnemy(attack === 'acolyte' ? 'acolyte' : 'warden',
+                room.cx + 6, room.cz, room, { affixes: [] });
+              e.hp = e.maxHp * 0.7; // Enables the existing Floor I boss fan.
+              e.bossEnraged = enraged;
+              e.state = attack === 'nova' ? 'leap' : 'strike';
+              e.stateTimer = 0;
+              e.leapDur = 0.01;
+              e.leapStartX = e.leapTargetX = e.x;
+              e.leapStartZ = e.leapTargetZ = e.z;
+              g.updateEnemies(0.06);
+              rows.push({ floor, difficulty, attack, enraged, speeds,
+                tempo: scaling.enemyAtkRateMult, dmg: e.dmg,
+                shots: g.projectiles.map(p => ({ speed: p.speed, velocity: Math.hypot(p.vx, p.vz),
+                  dmg: p.dmg, friendly: p.friendly, color: p.colorHex, yaw: Math.atan2(p.vx, p.vz) })) });
+            }
+          }
+        }
+      }
+      g.clearEntities();
+      g.floorIndex = saved.index;
+      g.floorCfg = saved.cfg;
+      g.setDifficulty(saved.difficulty, false);
+      return { defaultSpeed, rows };
+    }''')
+    assert checks['defaultSpeed'] == 6.3
+    for row in checks['rows']:
+        floor, attack = row['floor'], row['attack']
+        for enemy, speed in {'thrall': 3.30, 'stalker': 4.28, 'acolyte': 3.80,
+                             'juggernaut': 2.23, 'warden': 3.07}.items():
+            assert abs(row['speeds'][enemy] - speed) < 1e-9, row
+        if attack == 'acolyte':
+            old_count = 3 if floor == 3 else (2 if floor >= 1 or row['difficulty'] == 'abyssal' else 1)
+            count = old_count + 1
+            old_speed = 10.6 + floor * 1.15 + max(0, row['tempo'] - 1) * 4.5
+            damage = row['dmg']
+        else:
+            count = (4 + floor if attack == 'fan' else 9 + floor * 2) + (2 if row['enraged'] else 0)
+            old_speed = 11.8 + floor * 1.1 if attack == 'fan' else 11.0 + floor
+            damage = int(row['dmg'] * 0.8 + 0.5)
+        assert len(row['shots']) == count, row
+        assert len({round(shot['yaw'], 6) for shot in row['shots']}) == count, row
+        for shot in row['shots']:
+            assert abs(shot['speed'] - old_speed * 0.7) < 1e-9, row
+            assert abs(shot['velocity'] - shot['speed']) < 1e-9, row
+            assert shot['dmg'] == damage and shot['friendly'] is False, row
+            assert shot['color'] == (0xff3322 if attack == 'acolyte' else 0xff5522), row
+    print('[PASS] Enemy movement and 80 attack cases across all floors/difficulties passed!')
 
 
 def run_solo_checks(p):
@@ -351,16 +429,16 @@ def run_solo_checks(p):
     }''')
     assert combat_check['f1Stats'] == {
         'thrall': 437,
-        'thrallSpeed': 3.692,
+        'thrallSpeed': 3.432,
         'stalker': 379,
-        'stalkerSpeed': 4.784,
+        'stalkerSpeed': 4.451,
         'acolyte': 391,
-        'acolyteSpeed': 3.432,
+        'acolyteSpeed': 3.952,
         'acolyteBaseCd': 1.179,
         'juggernaut': 1288,
-        'juggernautSpeed': 2.496,
+        'juggernautSpeed': 2.319,
         'boss1': 17250,
-        'boss1Speed': 3.432,
+        'boss1Speed': 3.193,
         'boss1Cinders': 135,
     }, f'F1 stats mismatch: {combat_check["f1Stats"]}'
     assert combat_check['acolyteByDiff']['abyssal']['baseCd'] < combat_check['acolyteByDiff']['pilgrim']['baseCd'], f'Difficulty atkRate scaling failed: {combat_check["acolyteByDiff"]}'
@@ -479,13 +557,16 @@ def run_solo_checks(p):
     }''')
     assert descent_flask_check['floorIndex'] == 1 and descent_flask_check['flasks'] == 3, f'Floor descent should grant +2 flasks: {descent_flask_check}'
 
+    run_enemy_barrage_checks(page)
     assert not errors, f'Browser errors encountered: {errors}'
     browser.close()
     print('[PASS] Solo balance & mechanics verification passed!')
 
 
 def run_coop_checks(p):
-    port = 29883
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        port = probe.getsockname()[1]
     srv = subprocess.Popen(
         ['node', str(ROOT / 'lan-server.mjs'), '--port', str(port)],
         cwd=str(ROOT),
@@ -494,6 +575,7 @@ def run_coop_checks(p):
     )
     try:
         time.sleep(0.8)
+        assert srv.poll() is None, 'Isolated LAN test server failed to start'
         errors = []
         browser = p.chromium.launch(
             headless=True,
@@ -560,9 +642,58 @@ def run_coop_checks(p):
         c2_eids = p2.evaluate('() => window.__SANCTUM__.enemies.map((e) => e.eid).sort()')
         assert c1_eids == c2_eids and len(c1_eids) >= 14, f'Wave 2 coop sync mismatch: host={len(c1_eids)} client={len(c2_eids)}'
 
+        # Record real received projectiles, including their instantiated velocity.
+        p2.evaluate('''() => {
+          const g = window.__SANCTUM__;
+          g.mode = 'title';
+          window.__balanceShots = [];
+          const receive = g.lan.cb.onRelay;
+          g.lan.cb.onRelay = (from, payload) => {
+            receive(from, payload);
+            if (payload.balanceTest && payload.sub === 'proj') {
+              const p = g.projectiles.at(-1);
+              window.__balanceShots.push({ speed: p.speed, dmg: p.dmg,
+                velocity: Math.hypot(p.vx, p.vz), color: p.colorHex });
+            }
+          };
+        }''')
+        host_shots = p1.evaluate('''() => {
+          const g = window.__SANCTUM__;
+          g.mode = 'title';
+          const broadcast = g.coopBroadcastEnemyAttack;
+          g.coopBroadcastEnemyAttack = spec => broadcast({ ...spec, balanceTest: true });
+          const room = g.dungeon.rooms.find(r => r.type === 'boss');
+          const shots = [];
+          for (const attack of ['acolyte', 'fan', 'nova']) {
+            g.clearEntities();
+            const e = g.spawnEnemy(attack === 'acolyte' ? 'acolyte' : 'warden',
+              room.cx + 6, room.cz, room, { affixes: [] });
+            e.bossEnraged = true;
+            e.state = attack === 'nova' ? 'leap' : 'strike';
+            e.stateTimer = 0;
+            e.leapDur = 0.01;
+            e.leapStartX = e.leapTargetX = e.x;
+            e.leapStartZ = e.leapTargetZ = e.z;
+            g.updateEnemies(0.06);
+            shots.push(...g.projectiles.map(p => ({ speed: p.speed, dmg: p.dmg,
+              velocity: Math.hypot(p.vx, p.vz), color: p.colorHex })));
+          }
+          g.clearEntities();
+          g.coopBroadcastEnemyAttack = broadcast;
+          return shots;
+        }''')
+        assert len(host_shots) == 2 + 6 + 11, host_shots
+        p2.wait_for_function('(n) => window.__balanceShots.length >= n', arg=len(host_shots), timeout=5000)
+        client_shots = p2.evaluate('() => window.__balanceShots')
+        assert len(client_shots) == len(host_shots), client_shots
+        for host, client in zip(host_shots, client_shots):
+            assert client['speed'] == host['speed'] and client['dmg'] == host['dmg'], (host, client)
+            assert client['color'] == host['color'], (host, client)
+            assert abs(client['velocity'] - host['velocity']) < 1e-9, (host, client)
+
         assert not errors, f'Co-op errors: {errors}'
         browser.close()
-        print('[PASS] Co-op difficulty & multi-wave sync verification passed!')
+        print('[PASS] Co-op difficulty, multi-wave and all 19 enemy projectiles synced!')
     finally:
         srv.terminate()
         try:
