@@ -723,24 +723,24 @@ export const WEAPON_I18N = {
     enName: 'Sunforged Greatsword',
     zhSkill: '炽焰弧光',
     enSkill: 'SEARING ARC',
-    zhSummary: '4.6 米均衡大扇面三连重劈（终结技 360° 旋斩并挥出短程烈焰剑浪点燃前方） · 右键战技：发射贯穿全场的烈焰弯月光刃',
-    enSummary: '4.6m broad 3-hit pyre cleave (360° spin + fiery ember wave finisher) · RMB: Piercing Flame Crescent'
+    zhSummary: '3.7 米均衡大扇面三连重劈（终结技 360° 旋斩并挥出短程烈焰剑浪点燃前方） · 右键战技：发射贯穿全场的烈焰弯月光刃',
+    enSummary: '3.7m broad 3-hit pyre cleave (360° spin + fiery ember wave finisher) · RMB: Piercing Flame Crescent'
   },
   twinblades: {
     zhName: '霜噬双刃',
     enName: 'Frostbite Twinblades',
     zhSkill: '冰华突刺',
     enSkill: 'GLACIAL FLURRY',
-    zhSummary: '极速五段双刀连舞（含双刃十字二连剪、4.5 米寒芒突刺与冰莲双段旋斩，挥刀几乎不减速） · 右键：无敌幻影突进并洒出寒冰飞刃',
-    enSummary: 'Blistering 5-step dual dance (X-cross double-slash + 4.5m frost thrust + twin lotus spin) · RMB: Invulnerable Frost Lunge'
+    zhSummary: '极速五段双刀连舞（含双刃十字二连剪、3.6 米寒芒突刺与冰莲双段旋斩，挥刀几乎不减速） · 右键：无敌幻影突进并洒出寒冰飞刃',
+    enSummary: 'Blistering 5-step dual dance (X-cross double-slash + 3.6m frost thrust + twin lotus spin) · RMB: Invulnerable Frost Lunge'
   },
   warhammer: {
     zhName: '星陨重锤',
     enName: 'Astral Warhammer',
     zhSkill: '雷霆震地',
     enSkill: 'THUNDER SLAM',
-    zhSummary: '超重型两段蓄势猛砸：首击宽幅横扫强力击飞，次击双手过顶重砸身前 5.2 米圆形雷霆震地坑 · 右键：连续引爆三道雷霆裂地柱',
-    enSummary: 'Heavy 2-step maul: wide battering sweep into a 5.2m overhead thunder-crater slam · RMB: 3x Cascading Lightning Eruption'
+    zhSummary: '超重型两段蓄势猛砸：首击宽幅横扫强力击飞，次击双手过顶重砸身前 4.2 米圆形雷霆震地坑 · 右键：连续引爆三道雷霆裂地柱',
+    enSummary: 'Heavy 2-step maul: wide battering sweep into a 4.2m overhead thunder-crater slam · RMB: 3x Cascading Lightning Eruption'
   },
   crossbow: {
     zhName: '猎魔连弩',
@@ -787,8 +787,8 @@ export const WEAPON_I18N = {
     enName: 'Abyssal Chain-Whip',
     zhSkill: '锁魂钩拽',
     enSkill: 'SOULSHACKLE HOOK',
-    zhSummary: '6.8 米全场最长近战射程：前两段超远直线抽鞭、第三段 210° 狂澜大横扫；鞭梢甜点位命中必定暴击并炸开流血音爆 · 右键：钩拽远敌眩晕',
-    enSummary: '6.8m ultra-long whip: twin linear cracks + 210° sweep · Outer-tip sweet-spot ALWAYS CRITS & sonic-bursts · RMB: Harpoon Pull'
+    zhSummary: '5.5 米全场最长近战射程：前两段长距离直线抽鞭、第三段 210° 狂澜大横扫；鞭梢甜点位命中必定暴击并炸开流血音爆 · 右键：钩拽远敌眩晕',
+    enSummary: '5.5m long-reach whip: twin linear cracks + 210° sweep · Outer-tip sweet-spot ALWAYS CRITS & sonic-bursts · RMB: Harpoon Pull'
   },
   prismbeam: {
     zhName: '极光棱镜射线',
@@ -819,8 +819,8 @@ export const WEAPON_I18N = {
     enName: 'Crimson Harvester Scythe',
     zhSkill: '血月死神旋舞',
     enSkill: 'REAPER CYCLONE',
-    zhSummary: '5.5 米 240° 超广角内钩镰斩（命中微吸聚怪而非推远）接 6 米满月环刈，刀刀吸血并直接处决残血敌群化作追踪血魂 · 右键：鲜血旋风',
-    enSummary: '5.5m 240° inward-pulling reaper crescents + 6.0m full-moon harvest · Lifesteals & EXECUTES low-HP foes · RMB: Draining Whirlwind'
+    zhSummary: '4.4 米 240° 超广角内钩镰斩（命中微吸聚怪而非推远）接 4.8 米满月环刈，刀刀吸血并直接处决残血敌群化作追踪血魂 · 右键：鲜血旋风',
+    enSummary: '4.4m 240° inward-pulling reaper crescents + 4.8m full-moon harvest · Lifesteals & EXECUTES low-HP foes · RMB: Draining Whirlwind'
   },
   autoturret: {
     zhName: '发条奥术机关匣',
@@ -843,8 +843,8 @@ export const WEAPON_I18N = {
     enName: 'Eclipse Rift-Odachi',
     zhSkill: '次元绝影斩',
     enSkill: 'JUDGMENT OMNISLASH',
-    zhSummary: '【首领传说】5.3 米高速四段居合剑术（两连斜切 + 6.8 米一线贯刺 + 广角拔刀断空斩），每击撕裂延迟次元十字斩 · 右键：无敌闪烁五连绝影斩',
-    enSummary: '[BOSS MYTHIC] 5.3m swift 4-step iaido (twin cuts + 6.8m rift thrust + wide draw-slash) · Tears Cross-Rifts · RMB: Blink Omnislash'
+    zhSummary: '【首领传说】4.3 米高速四段居合剑术（两连斜切 + 5.5 米一线贯刺 + 广角拔刀断空斩），每击撕裂延迟次元十字斩 · 右键：无敌闪烁五连绝影斩',
+    enSummary: '[BOSS MYTHIC] 4.3m swift 4-step iaido (twin cuts + 5.5m rift thrust + wide draw-slash) · Tears Cross-Rifts · RMB: Blink Omnislash'
   },
   starfallbow: {
     zhName: '坠星天穹神弓',
@@ -867,8 +867,8 @@ export const WEAPON_I18N = {
     enName: 'Ragnarok Storm-Halberd',
     zhSkill: '雷神掷戟召回',
     enSkill: 'THUNDERGOD RECALL',
-    zhSummary: '【首领传说】三态长柄武艺：首段 6.6 米雷霆贯穿枪刺、二段 5.8 米战斧横扫千军、三段跃劈雷暴裂地坑，招招引落神雷 · 右键：掷戟贯穿全场并召回',
-    enSummary: '[BOSS MYTHIC] 3-form polearm arts: 6.6m lightning thrust, 5.8m wide halberd sweep & 5.9m sky-bolt crater slam · RMB: Thrown Recall'
+    zhSummary: '【首领传说】三态长柄武艺：首段 5.3 米雷霆贯穿枪刺、二段 4.6 米战斧横扫千军、三段跃劈雷暴裂地坑，招招引落神雷 · 右键：掷戟贯穿全场并召回',
+    enSummary: '[BOSS MYTHIC] 3-form polearm arts: 5.3m lightning thrust, 4.6m wide halberd sweep & 4.7m sky-bolt crater slam · RMB: Thrown Recall'
   },
   sunforgecannon: {
     zhName: '赫利俄斯歼星炮',
